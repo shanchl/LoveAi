@@ -252,8 +252,7 @@ class EndingActivity : AppCompatActivity() {
     }
 
     private fun initMusic() {
-        MusicManager.play()
-        isPlaying = true
+        isPlaying = MusicManager.isMusicPlaying()
         updateMusicButton()
         updateMusicName()
     }
@@ -302,9 +301,8 @@ class EndingActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (isPlaying) {
-            MusicManager.play()
-        }
+        isPlaying = MusicManager.isMusicPlaying()
+        updateMusicButton()
         updateMusicName()
     }
 

@@ -69,19 +69,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initMusic() {
-        // 检查音乐是否已经在播放（避免重新开始时重复播放）
-        if (MusicManager.isMusicPlaying()) {
-            // 音乐已在播放，不做处理
+        if (MusicManager.hasInitializedPlayback()) {
             return
         }
-        
-        // 自动扫描 res/raw 目录下的音乐文件生成播放列表
+
         MusicManager.initAutoPlaylist(this)
-        
-        // 设置播放模式
         MusicManager.setPlayMode(MusicManager.PlayMode.LOOP)
-        
-        // 开始播放
         MusicManager.play()
     }
 
@@ -157,6 +150,7 @@ class MainActivity : AppCompatActivity() {
         btnMusic.setOnClickListener {
             val isPlaying = MusicManager.toggle()
             btnMusic.alpha = if (isPlaying) 1f else 0.5f
+            updateMusicUI()
             Toast.makeText(this, if (isPlaying) "音乐已开启" else "音乐已关闭", Toast.LENGTH_SHORT).show()
         }
 
@@ -176,7 +170,8 @@ class MainActivity : AppCompatActivity() {
         }
         
         btnPlayPauseMusic.setOnClickListener {
-            val isPlaying = MusicManager.toggle()
+            MusicManager.toggle()
+            btnMusic.alpha = if (MusicManager.isMusicPlaying()) 1f else 0.5f
             updateMusicUI()
         }
         
@@ -476,7 +471,8 @@ class MainActivity : AppCompatActivity() {
         if (viewModel.isPlaying.value == true && !hasFinished) {
             startAutoSlide()
         }
-        MusicManager.play()
+        btnMusic.alpha = if (MusicManager.isMusicPlaying()) 1f else 0.5f
+        updateMusicUI()
     }
 
     override fun onPause() {

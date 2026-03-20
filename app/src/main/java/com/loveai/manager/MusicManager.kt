@@ -388,6 +388,10 @@ object MusicManager {
      */
     fun isReady(): Boolean = isPrepared
 
+    fun hasInitializedPlayback(): Boolean {
+        return mediaPlayer != null || playlist.isNotEmpty()
+    }
+
     /**
      * 获取当前播放位置（毫秒）
      */

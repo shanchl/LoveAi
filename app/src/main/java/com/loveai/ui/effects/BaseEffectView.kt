@@ -11,7 +11,10 @@ import android.graphics.Shader
 import android.util.AttributeSet
 import android.view.View
 import com.loveai.model.Effect
+import com.loveai.model.EffectType
 import com.loveai.model.EffectVariant
+import kotlin.math.abs
+import kotlin.math.sin
 
 /**
  * 所有动态特效视图的基类。
@@ -226,91 +229,237 @@ abstract class BaseEffectView @JvmOverloads constructor(
 
         val textWidth = paint.measureText(text)
         val fontMetrics = paint.fontMetrics
+        val style = resolveTextDecorStyle(textType)
+        val rectLeft = x - textWidth / 2f - if (textType == ContrastTextType.MAIN) 24f else 20f
+        val rectTop = y + fontMetrics.ascent - if (textType == ContrastTextType.MAIN) 14f else 12f
+        val rectRight = x + textWidth / 2f + if (textType == ContrastTextType.MAIN) 24f else 20f
+        val rectBottom = y + fontMetrics.descent + if (textType == ContrastTextType.MAIN) 14f else 12f
+        val radius = if (textType == ContrastTextType.MAIN) 20f else 16f
 
-        when (textType) {
-            ContrastTextType.MAIN -> {
-                val paddingH = 24f
-                val paddingV = 14f
-                val rectLeft = x - textWidth / 2f - paddingH
-                val rectTop = y + fontMetrics.ascent - paddingV
-                val rectRight = x + textWidth / 2f + paddingH
-                val rectBottom = y + fontMetrics.descent + paddingV
-                val radius = 20f
+        drawTextPanel(canvas, rectLeft, rectTop, rectRight, rectBottom, radius, style, textType)
+        drawStyledText(canvas, text, x, y, paint, style, textType)
+    }
 
-                val panelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    color = Color.argb(0x99, 0x10, 0x10, 0x1A)
-                    style = Paint.Style.FILL
-                }
-                canvas.drawRoundRect(rectLeft, rectTop, rectRight, rectBottom, radius, radius, panelPaint)
-
-                val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    style = Paint.Style.STROKE
-                    strokeWidth = 1.5f
-                    color = adjustAlpha(primaryColor, 70)
-                }
-                canvas.drawRoundRect(rectLeft, rectTop, rectRight, rectBottom, radius, radius, borderPaint)
-
-                val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    color = adjustAlpha(primaryColor, 0x25)
-                    maskFilter = BlurMaskFilter(25f, BlurMaskFilter.Blur.NORMAL)
-                }
-                canvas.drawRoundRect(
-                    rectLeft - 5f,
-                    rectTop - 5f,
-                    rectRight + 5f,
-                    rectBottom + 5f,
-                    radius + 5f,
-                    radius + 5f,
-                    glowPaint
-                )
-
-                val outlinePaint = Paint(paint).apply {
-                    style = Paint.Style.STROKE
-                    strokeWidth = (paint.textSize / 14f).coerceAtLeast(2f)
-                    color = Color.argb(140, 0, 0, 0)
-                    strokeJoin = Paint.Join.ROUND
-                    strokeMiter = 10f
-                }
-                canvas.drawText(text, x, y, outlinePaint)
-                canvas.drawText(text, x, y, paint)
+    private fun resolveTextDecorStyle(textType: ContrastTextType): TextDecorStyle {
+        return when (effect?.type) {
+            EffectType.FIREWORK, EffectType.HEART_PULSE, EffectType.RIPPLE -> {
+                if (textType == ContrastTextType.MAIN) TextDecorStyle.BURST else TextDecorStyle.SOFT_GLOW
             }
-
-            ContrastTextType.SUB -> {
-                val paddingH = 20f
-                val paddingV = 12f
-                val rectLeft = x - textWidth / 2f - paddingH
-                val rectTop = y + fontMetrics.ascent - paddingV
-                val rectRight = x + textWidth / 2f + paddingH
-                val rectBottom = y + fontMetrics.descent + paddingV
-                val radius = 16f
-
-                val panelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                    color = Color.argb(0xE6, 0x08, 0x08, 0x12)
-                    style = Paint.Style.FILL
-                }
-                canvas.drawRoundRect(rectLeft, rectTop, rectRight, rectBottom, radius, radius, panelPaint)
-
-                val savedAlpha = paint.alpha
-                val outlinePaint = Paint(paint).apply {
-                    alpha = 255
-                    style = Paint.Style.STROKE
-                    strokeWidth = (paint.textSize / 18f).coerceAtLeast(1.2f)
-                    color = Color.argb(120, 0, 0, 0)
-                    strokeJoin = Paint.Join.ROUND
-                }
-                canvas.drawText(text, x, y, outlinePaint)
-
-                paint.alpha = 255
-                paint.setShadowLayer(8f, 0f, 3f, Color.argb(0xDD, 0x00, 0x00, 0x00))
-                canvas.drawText(text, x, y, paint)
-                paint.alpha = savedAlpha
-                paint.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
+            EffectType.STARRY_SKY, EffectType.AURORA, EffectType.METEOR_SHOWER -> {
+                if (textType == ContrastTextType.MAIN) TextDecorStyle.STARDUST else TextDecorStyle.GALAXY
+            }
+            EffectType.PETAL_FALL, EffectType.BUTTERFLY, EffectType.BUBBLE_FLOAT -> {
+                if (textType == ContrastTextType.MAIN) TextDecorStyle.FLOATING else TextDecorStyle.RIBBON
+            }
+            EffectType.TYPEWRITER -> {
+                if (textType == ContrastTextType.MAIN) TextDecorStyle.LETTER else TextDecorStyle.RIBBON
+            }
+            else -> {
+                if (textType == ContrastTextType.MAIN) TextDecorStyle.SOFT_GLOW else TextDecorStyle.RIBBON
             }
         }
+    }
+
+    private fun drawTextPanel(
+        canvas: Canvas,
+        left: Float,
+        top: Float,
+        right: Float,
+        bottom: Float,
+        radius: Float,
+        style: TextDecorStyle,
+        textType: ContrastTextType
+    ) {
+        val frame = currentRenderFrame().toFloat()
+        val panelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+        val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = if (textType == ContrastTextType.MAIN) 1.8f else 1.2f
+        }
+        val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            maskFilter = BlurMaskFilter(if (textType == ContrastTextType.MAIN) 26f else 18f, BlurMaskFilter.Blur.NORMAL)
+        }
+
+        when (style) {
+            TextDecorStyle.SOFT_GLOW -> {
+                panelPaint.color = Color.argb(if (textType == ContrastTextType.MAIN) 150 else 214, 12, 12, 20)
+                borderPaint.color = adjustAlpha(primaryColor, if (textType == ContrastTextType.MAIN) 82 else 62)
+                glowPaint.color = adjustAlpha(primaryColor, if (textType == ContrastTextType.MAIN) 42 else 24)
+                canvas.drawRoundRect(left, top, right, bottom, radius, radius, panelPaint)
+                canvas.drawRoundRect(left, top, right, bottom, radius, radius, borderPaint)
+                canvas.drawRoundRect(left - 4f, top - 4f, right + 4f, bottom + 4f, radius + 4f, radius + 4f, glowPaint)
+            }
+
+            TextDecorStyle.BURST -> {
+                panelPaint.shader = LinearGradient(
+                    left,
+                    top,
+                    right,
+                    bottom,
+                    intArrayOf(Color.argb(164, 18, 10, 24), adjustAlpha(primaryColor, 76), adjustAlpha(secondaryColor, 62)),
+                    floatArrayOf(0f, 0.5f, 1f),
+                    Shader.TileMode.CLAMP
+                )
+                borderPaint.color = adjustAlpha(Color.WHITE, 96)
+                glowPaint.color = adjustAlpha(primaryColor, 48)
+                canvas.drawRoundRect(left, top, right, bottom, radius + 6f, radius + 6f, panelPaint)
+                canvas.drawRoundRect(left, top, right, bottom, radius + 6f, radius + 6f, borderPaint)
+                canvas.drawCircle((left + right) / 2f, (top + bottom) / 2f, (right - left) * 0.34f, glowPaint)
+                paint.shader = null
+            }
+
+            TextDecorStyle.STARDUST, TextDecorStyle.GALAXY -> {
+                panelPaint.shader = LinearGradient(
+                    left,
+                    top,
+                    right,
+                    bottom,
+                    intArrayOf(Color.argb(126, 8, 12, 26), Color.argb(168, 10, 12, 24), Color.argb(110, 18, 24, 38)),
+                    floatArrayOf(0f, 0.55f, 1f),
+                    Shader.TileMode.CLAMP
+                )
+                borderPaint.color = adjustAlpha(Color.WHITE, if (style == TextDecorStyle.STARDUST) 68 else 52)
+                canvas.drawRoundRect(left, top, right, bottom, radius, radius, panelPaint)
+                canvas.drawRoundRect(left, top, right, bottom, radius, radius, borderPaint)
+                repeat(if (style == TextDecorStyle.STARDUST) 6 else 4) { index ->
+                    val starX = left + (right - left) * (0.14f + index * 0.14f)
+                    val starY = top + (bottom - top) * (0.2f + ((index + frame.toInt()) % 3) * 0.2f)
+                    val alpha = (96 + abs(sin(frame * 0.05f + index) * 60f).toInt()).coerceAtMost(170)
+                    borderPaint.style = Paint.Style.FILL
+                    borderPaint.color = Color.argb(alpha, 220, 232, 255)
+                    canvas.drawCircle(starX, starY, if (style == TextDecorStyle.STARDUST) 1.8f else 1.4f, borderPaint)
+                    borderPaint.style = Paint.Style.STROKE
+                }
+                panelPaint.shader = null
+            }
+
+            TextDecorStyle.FLOATING, TextDecorStyle.RIBBON -> {
+                panelPaint.shader = LinearGradient(
+                    left,
+                    top,
+                    right,
+                    bottom,
+                    intArrayOf(Color.argb(174, 18, 12, 20), adjustAlpha(primaryColor, 60), Color.argb(130, 34, 20, 32)),
+                    floatArrayOf(0f, 0.48f, 1f),
+                    Shader.TileMode.CLAMP
+                )
+                borderPaint.color = adjustAlpha(primaryColor, 76)
+                canvas.drawRoundRect(left, top, right, bottom, radius + 8f, radius + 8f, panelPaint)
+                canvas.drawRoundRect(left, top, right, bottom, radius + 8f, radius + 8f, borderPaint)
+                val ribbonY = bottom + if (style == TextDecorStyle.FLOATING) 8f else 5f
+                borderPaint.strokeWidth = 2.2f
+                borderPaint.color = adjustAlpha(secondaryColor, 96)
+                canvas.drawLine(left + 18f, ribbonY, right - 18f, ribbonY, borderPaint)
+                panelPaint.shader = null
+            }
+
+            TextDecorStyle.LETTER -> {
+                panelPaint.color = Color.argb(214, 244, 236, 222)
+                borderPaint.color = adjustAlpha(primaryColor, 72)
+                canvas.drawRoundRect(left, top, right, bottom, 10f, 10f, panelPaint)
+                canvas.drawRoundRect(left, top, right, bottom, 10f, 10f, borderPaint)
+                borderPaint.color = adjustAlpha(secondaryColor, 72)
+                borderPaint.strokeWidth = 1f
+                val baseY = bottom - 8f
+                canvas.drawLine(left + 14f, baseY, right - 14f, baseY, borderPaint)
+            }
+        }
+    }
+
+    private fun drawStyledText(
+        canvas: Canvas,
+        text: String,
+        centerX: Float,
+        baselineY: Float,
+        paint: Paint,
+        style: TextDecorStyle,
+        textType: ContrastTextType
+    ) {
+        val savedAlpha = paint.alpha
+        val savedAlign = paint.textAlign
+        val savedColor = paint.color
+        val savedShader = paint.shader
+        val savedStyle = paint.style
+        val savedShadowRadius =  if (textType == ContrastTextType.MAIN) 10f else 7f
+        val outlinePaint = Paint(paint).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = if (textType == ContrastTextType.MAIN) (paint.textSize / 14f).coerceAtLeast(2f) else (paint.textSize / 18f).coerceAtLeast(1.2f)
+            color = Color.argb(if (style == TextDecorStyle.LETTER) 90 else 140, 0, 0, 0)
+            strokeJoin = Paint.Join.ROUND
+            strokeMiter = 10f
+            textAlign = Paint.Align.LEFT
+        }
+
+        paint.textAlign = Paint.Align.LEFT
+        paint.style = Paint.Style.FILL
+
+        if (style == TextDecorStyle.LETTER) {
+            paint.color = Color.parseColor("#533B3B")
+            paint.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
+        } else if (style == TextDecorStyle.STARDUST || style == TextDecorStyle.GALAXY) {
+            paint.shader = LinearGradient(
+                centerX - paint.measureText(text) / 2f,
+                baselineY - paint.textSize,
+                centerX + paint.measureText(text) / 2f,
+                baselineY,
+                intArrayOf(Color.WHITE, adjustAlpha(Color.WHITE, 230), adjustAlpha(primaryColor, 220)),
+                floatArrayOf(0f, 0.58f, 1f),
+                Shader.TileMode.CLAMP
+            )
+        } else {
+            paint.setShadowLayer(savedShadowRadius, 0f, 2f, textGlowColor())
+        }
+
+        val frame = currentRenderFrame().toFloat()
+        val totalWidth = paint.measureText(text)
+        var cursorX = centerX - totalWidth / 2f
+
+        text.forEachIndexed { index, ch ->
+            val char = ch.toString()
+            val charWidth = paint.measureText(char)
+            val normalized = index - (text.length - 1) / 2f
+            val offsetY = when (style) {
+                TextDecorStyle.BURST -> -abs(normalized) * 0.7f + sin(frame * 0.08f + index * 0.6f) * 1.8f
+                TextDecorStyle.STARDUST -> sin(frame * 0.05f + index * 0.45f) * 1.6f
+                TextDecorStyle.GALAXY -> sin(frame * 0.04f + index * 0.35f) * 1.2f - abs(normalized) * 0.25f
+                TextDecorStyle.FLOATING -> sin(frame * 0.06f + index * 0.55f) * 2.1f
+                TextDecorStyle.RIBBON -> sin(frame * 0.05f + index * 0.5f) * 1.3f
+                TextDecorStyle.LETTER -> 0f
+                TextDecorStyle.SOFT_GLOW -> 0f
+            }
+            val offsetX = when (style) {
+                TextDecorStyle.BURST -> normalized * 0.6f
+                TextDecorStyle.FLOATING -> sin(frame * 0.03f + index * 0.4f) * 0.8f
+                else -> 0f
+            }
+            val charX = cursorX + offsetX
+            val charY = baselineY + offsetY
+            canvas.drawText(char, charX, charY, outlinePaint)
+            canvas.drawText(char, charX, charY, paint)
+            cursorX += charWidth
+        }
+
+        paint.alpha = savedAlpha
+        paint.color = savedColor
+        paint.textAlign = savedAlign
+        paint.shader = savedShader
+        paint.style = savedStyle
+        paint.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
     }
 
     protected enum class ContrastTextType {
         MAIN,
         SUB
+    }
+
+    private enum class TextDecorStyle {
+        SOFT_GLOW,
+        BURST,
+        STARDUST,
+        GALAXY,
+        FLOATING,
+        RIBBON,
+        LETTER
     }
 }
