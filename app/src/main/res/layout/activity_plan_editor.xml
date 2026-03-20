@@ -52,6 +52,14 @@
             android:layout_marginTop="10dp"
             android:text="&#24212;&#29992;&#27169;&#26495;" />
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="&#27169;&#26495;&#20250;&#22635;&#20805;&#26041;&#26696;&#21517;&#31216;&#12289;&#20027;&#26631;&#39064;&#12289;&#21103;&#26631;&#39064;&#12290;&#20320;&#20173;&#21487;&#20197;&#22312;&#19979;&#38754;&#19977;&#20010;&#36755;&#20837;&#26694;&#32487;&#32493;&#20462;&#25913;&#12290;"
+            android:textColor="#A8FFFFFF"
+            android:textSize="12sp" />
+
         <EditText
             android:id="@+id/etPlanName"
             android:layout_width="match_parent"
@@ -115,8 +123,8 @@
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvSelectedEffects"
             android:layout_width="match_parent"
-            android:layout_height="220dp"
-            android:nestedScrollingEnabled="true" />
+            android:layout_height="wrap_content"
+            android:nestedScrollingEnabled="false" />
 
         <TextView
             android:layout_width="wrap_content"

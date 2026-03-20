@@ -148,7 +148,7 @@ class PlanEditorActivity : AppCompatActivity() {
 
         rvSelected.layoutManager = LinearLayoutManager(this)
         rvSelected.adapter = selectedAdapter
-        rvSelected.isNestedScrollingEnabled = true
+        rvSelected.isNestedScrollingEnabled = false
         rvAvailable.layoutManager = LinearLayoutManager(this)
         rvAvailable.adapter = availableAdapter
         rvAvailable.isNestedScrollingEnabled = true
