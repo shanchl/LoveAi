@@ -1,0 +1,49 @@
+<resources>
+    <!-- Primary Colors -->
+    <color name="pink_primary">#FF6B9D</color>
+    <color name="pink_deep">#FF4081</color>
+    <color name="pink_love">#E91E63</color>
+    <color name="pink_light">#FFB3C6</color>
+    <color name="pink_pale">#FFF0F5</color>
+
+    <!-- Background Colors -->
+    <color name="bg_light_pink">#FFF0F5</color>
+    <color name="bg_medium_pink">#FFE4E8</color>
+    <color name="bg_dark_navy">#1A1A2E</color>
+    <color name="bg_dark_purple">#2D2D44</color>
+    <color name="bg_midnight">#0D0D1A</color>
+    <color name="bg_rose">#3D1030</color>
+
+    <!-- Text Colors -->
+    <color name="text_white">#FFFFFF</color>
+    <color name="text_pink">#FF6B9D</color>
+    <color name="text_dark">#2C2C2C</color>
+    <color name="text_gold">#FFD700</color>
+
+    <!-- Functional Colors -->
+    <color name="gold">#FFD700</color>
+    <color name="red_heart">#FF4444</color>
+    <color name="green_success">#4CAF50</color>
+    <color name="purple">#9C27B0</color>
+    <color name="blue_star">#2196F3</color>
+    <color name="cyan">#00BCD4</color>
+    <color name="orange">#FF9800</color>
+    <color name="yellow">#FFEB3B</color>
+
+    <!-- Gradient Colors -->
+    <color name="grad_start_1">#FF6B9D</color>
+    <color name="grad_end_1">#9C27B0</color>
+    <color name="grad_start_2">#1A1A2E</color>
+    <color name="grad_end_2">#16213E</color>
+    <color name="grad_start_3">#FF4081</color>
+    <color name="grad_end_3">#FF6B9D</color>
+
+    <!-- Basic Colors -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+
+    <!-- Transparent -->
+    <color name="transparent">#00000000</color>
+    <color name="semi_black">#80000000</color>
+    <color name="semi_white">#80FFFFFF</color>
+</resources>

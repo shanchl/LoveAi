@@ -1,0 +1,43 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme -->
+    <style name="Theme.LoveAI" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/pink_primary</item>
+        <item name="colorPrimaryVariant">@color/pink_deep</item>
+        <item name="colorOnPrimary">@color/text_white</item>
+        <item name="colorSecondary">@color/purple</item>
+        <item name="colorOnSecondary">@color/text_white</item>
+        <item name="android:statusBarColor">@color/transparent</item>
+        <item name="android:navigationBarColor">@color/bg_dark_navy</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+        <item name="android:windowTranslucentStatus">true</item>
+    </style>
+
+    <!-- Splash theme -->
+    <style name="Theme.LoveAI.Splash" parent="Theme.LoveAI">
+        <item name="android:windowBackground">@color/bg_dark_navy</item>
+        <item name="android:windowFullscreen">false</item>
+    </style>
+
+    <!-- Text Styles -->
+    <style name="TextStyle.LoveMessage" parent="Widget.MaterialComponents.TextView">
+        <item name="android:textColor">@color/text_white</item>
+        <item name="android:textSize">22sp</item>
+        <item name="android:textStyle">italic</item>
+        <item name="android:fontFamily">sans-serif-light</item>
+        <item name="android:letterSpacing">0.05</item>
+        <item name="android:lineSpacingExtra">6dp</item>
+    </style>
+
+    <style name="TextStyle.Countdown" parent="Widget.MaterialComponents.TextView">
+        <item name="android:textColor">@color/text_white</item>
+        <item name="android:textSize">80sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">sans-serif-thin</item>
+    </style>
+
+    <!-- Dialog样式 -->
+    <style name="Theme.App.Dialog" parent="Theme.MaterialComponents.DayNight.Dialog.Alert">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">true</item>
+    </style>
+</resources>

@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Love AI</string>
+    <string name="preparing_gift">正在为你准备一份特别的礼物…</string>
+    <string name="favorite">收藏</string>
+    <string name="favorites_title">我收藏的爱意</string>
+    <string name="no_favorites">还没有收藏任何效果，快去探索吧~</string>
+    <string name="tap_to_pause">点击暂停</string>
+    <string name="tap_to_play">点击继续</string>
+
+    <!-- 音乐列表 - 格式：music_文件名 -->
+    <string name="music_bg_music">告白气球-周杰伦</string>
+    <string name="music_love_song_1">有点甜-汪苏泷/BY2</string>
+</resources>

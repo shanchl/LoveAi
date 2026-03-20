@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 精致心形图标 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,85 L35,65 C20,50 20,35 35,25 C43,19.5 52,22 54,30 C56,22 65,19.5 73,25 C88,35 88,50 73,65 L54,85 Z" />
+    <!-- 心形高光 -->
+    <path
+        android:fillColor="#FFB3C6"
+        android:pathData="M40,35 C40,35 45,28 52,32 C52,32 48,40 40,35 Z" />
+</vector>
