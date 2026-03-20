@@ -267,21 +267,21 @@ abstract class BaseEffectView @JvmOverloads constructor(
         right: Float,
         bottom: Float,
         radius: Float,
-        style: TextDecorStyle,
+        decorStyle: TextDecorStyle,
         textType: ContrastTextType
     ) {
         val frame = currentRenderFrame().toFloat()
-        val panelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+        val panelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.style = Paint.Style.FILL }
         val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE
+            this.style = Paint.Style.STROKE
             strokeWidth = if (textType == ContrastTextType.MAIN) 1.8f else 1.2f
         }
         val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.FILL
+            this.style = Paint.Style.FILL
             maskFilter = BlurMaskFilter(if (textType == ContrastTextType.MAIN) 26f else 18f, BlurMaskFilter.Blur.NORMAL)
         }
 
-        when (style) {
+        when (decorStyle) {
             TextDecorStyle.SOFT_GLOW -> {
                 panelPaint.color = Color.argb(if (textType == ContrastTextType.MAIN) 150 else 214, 12, 12, 20)
                 borderPaint.color = adjustAlpha(primaryColor, if (textType == ContrastTextType.MAIN) 82 else 62)
@@ -306,7 +306,7 @@ abstract class BaseEffectView @JvmOverloads constructor(
                 canvas.drawRoundRect(left, top, right, bottom, radius + 6f, radius + 6f, panelPaint)
                 canvas.drawRoundRect(left, top, right, bottom, radius + 6f, radius + 6f, borderPaint)
                 canvas.drawCircle((left + right) / 2f, (top + bottom) / 2f, (right - left) * 0.34f, glowPaint)
-                paint.shader = null
+                panelPaint.shader = null
             }
 
             TextDecorStyle.STARDUST, TextDecorStyle.GALAXY -> {
@@ -319,16 +319,16 @@ abstract class BaseEffectView @JvmOverloads constructor(
                     floatArrayOf(0f, 0.55f, 1f),
                     Shader.TileMode.CLAMP
                 )
-                borderPaint.color = adjustAlpha(Color.WHITE, if (style == TextDecorStyle.STARDUST) 68 else 52)
+                borderPaint.color = adjustAlpha(Color.WHITE, if (decorStyle == TextDecorStyle.STARDUST) 68 else 52)
                 canvas.drawRoundRect(left, top, right, bottom, radius, radius, panelPaint)
                 canvas.drawRoundRect(left, top, right, bottom, radius, radius, borderPaint)
-                repeat(if (style == TextDecorStyle.STARDUST) 6 else 4) { index ->
+                repeat(if (decorStyle == TextDecorStyle.STARDUST) 6 else 4) { index ->
                     val starX = left + (right - left) * (0.14f + index * 0.14f)
                     val starY = top + (bottom - top) * (0.2f + ((index + frame.toInt()) % 3) * 0.2f)
                     val alpha = (96 + abs(sin(frame * 0.05f + index) * 60f).toInt()).coerceAtMost(170)
                     borderPaint.style = Paint.Style.FILL
                     borderPaint.color = Color.argb(alpha, 220, 232, 255)
-                    canvas.drawCircle(starX, starY, if (style == TextDecorStyle.STARDUST) 1.8f else 1.4f, borderPaint)
+                    canvas.drawCircle(starX, starY, if (decorStyle == TextDecorStyle.STARDUST) 1.8f else 1.4f, borderPaint)
                     borderPaint.style = Paint.Style.STROKE
                 }
                 panelPaint.shader = null
@@ -347,7 +347,7 @@ abstract class BaseEffectView @JvmOverloads constructor(
                 borderPaint.color = adjustAlpha(primaryColor, 76)
                 canvas.drawRoundRect(left, top, right, bottom, radius + 8f, radius + 8f, panelPaint)
                 canvas.drawRoundRect(left, top, right, bottom, radius + 8f, radius + 8f, borderPaint)
-                val ribbonY = bottom + if (style == TextDecorStyle.FLOATING) 8f else 5f
+                val ribbonY = bottom + if (decorStyle == TextDecorStyle.FLOATING) 8f else 5f
                 borderPaint.strokeWidth = 2.2f
                 borderPaint.color = adjustAlpha(secondaryColor, 96)
                 canvas.drawLine(left + 18f, ribbonY, right - 18f, ribbonY, borderPaint)
@@ -373,7 +373,7 @@ abstract class BaseEffectView @JvmOverloads constructor(
         centerX: Float,
         baselineY: Float,
         paint: Paint,
-        style: TextDecorStyle,
+        decorStyle: TextDecorStyle,
         textType: ContrastTextType
     ) {
         val savedAlpha = paint.alpha
@@ -383,9 +383,9 @@ abstract class BaseEffectView @JvmOverloads constructor(
         val savedStyle = paint.style
         val savedShadowRadius =  if (textType == ContrastTextType.MAIN) 10f else 7f
         val outlinePaint = Paint(paint).apply {
-            style = Paint.Style.STROKE
+            this.style = Paint.Style.STROKE
             strokeWidth = if (textType == ContrastTextType.MAIN) (paint.textSize / 14f).coerceAtLeast(2f) else (paint.textSize / 18f).coerceAtLeast(1.2f)
-            color = Color.argb(if (style == TextDecorStyle.LETTER) 90 else 140, 0, 0, 0)
+            color = Color.argb(if (decorStyle == TextDecorStyle.LETTER) 90 else 140, 0, 0, 0)
             strokeJoin = Paint.Join.ROUND
             strokeMiter = 10f
             textAlign = Paint.Align.LEFT
@@ -394,10 +394,10 @@ abstract class BaseEffectView @JvmOverloads constructor(
         paint.textAlign = Paint.Align.LEFT
         paint.style = Paint.Style.FILL
 
-        if (style == TextDecorStyle.LETTER) {
+        if (decorStyle == TextDecorStyle.LETTER) {
             paint.color = Color.parseColor("#533B3B")
             paint.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
-        } else if (style == TextDecorStyle.STARDUST || style == TextDecorStyle.GALAXY) {
+        } else if (decorStyle == TextDecorStyle.STARDUST || decorStyle == TextDecorStyle.GALAXY) {
             paint.shader = LinearGradient(
                 centerX - paint.measureText(text) / 2f,
                 baselineY - paint.textSize,
@@ -419,7 +419,7 @@ abstract class BaseEffectView @JvmOverloads constructor(
             val char = ch.toString()
             val charWidth = paint.measureText(char)
             val normalized = index - (text.length - 1) / 2f
-            val offsetY = when (style) {
+            val offsetY = when (decorStyle) {
                 TextDecorStyle.BURST -> -abs(normalized) * 0.7f + sin(frame * 0.08f + index * 0.6f) * 1.8f
                 TextDecorStyle.STARDUST -> sin(frame * 0.05f + index * 0.45f) * 1.6f
                 TextDecorStyle.GALAXY -> sin(frame * 0.04f + index * 0.35f) * 1.2f - abs(normalized) * 0.25f
@@ -428,7 +428,7 @@ abstract class BaseEffectView @JvmOverloads constructor(
                 TextDecorStyle.LETTER -> 0f
                 TextDecorStyle.SOFT_GLOW -> 0f
             }
-            val offsetX = when (style) {
+            val offsetX = when (decorStyle) {
                 TextDecorStyle.BURST -> normalized * 0.6f
                 TextDecorStyle.FLOATING -> sin(frame * 0.03f + index * 0.4f) * 0.8f
                 else -> 0f
