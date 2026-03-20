@@ -39,6 +39,8 @@ class HeartPulseEffect @JvmOverloads constructor(
     private var scale = 1f
     private var glowAlpha = 0f
     private var textAlpha = 0f
+    private var beatMotion = 0f
+    private var accentMotion = 0f
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
@@ -61,6 +63,8 @@ class HeartPulseEffect @JvmOverloads constructor(
         scale = 1f
         glowAlpha = 0f
         textAlpha = 0f
+        beatMotion = 0f
+        accentMotion = 0f
         pulseRings.clear()
 
         textPaint.apply {
@@ -123,8 +127,8 @@ class HeartPulseEffect @JvmOverloads constructor(
         canvas.drawCircle(centerX - baseSize * 0.22f, centerY - baseSize * 0.18f, baseSize * 0.11f, paint)
 
         if (message.isNotEmpty()) {
-            val textScaleVal = 1f + (scale - 1f) * 0.24f
-            val messageY = height * 0.62f + sin(frameCount * 0.03f) * 4f
+            val textScaleVal = 1f + beatMotion * 0.09f + accentMotion * 0.06f
+            val messageY = height * 0.62f - beatMotion * 8f - accentMotion * 5f
 
             canvas.save()
             canvas.scale(textScaleVal, textScaleVal, centerX, messageY)
@@ -146,9 +150,11 @@ class HeartPulseEffect @JvmOverloads constructor(
 
         textAlpha = (frameCount / 55f).coerceIn(0f, 1f)
 
-        val beat = sin(frameCount * 0.14f)
+        val beat = sin(frameCount * 0.14f).coerceAtLeast(0f)
         val accent = sin(frameCount * 0.28f).coerceAtLeast(0f)
-        scale = 1f + beat.coerceAtLeast(0f) * 0.08f + accent * 0.05f
+        beatMotion = beat
+        accentMotion = accent
+        scale = 1f + beatMotion * 0.08f + accentMotion * 0.05f
         glowAlpha = (sin(frameCount * 0.08f) * 0.5f + 0.5f)
 
         if (frameCount % 18 == 0) {
