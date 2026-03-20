@@ -48,6 +48,7 @@ abstract class BaseEffectView @JvmOverloads constructor(
     private val ambientPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val vignettePaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var vignetteShader: RadialGradient? = null
+    private var currentMainTextLayout: TextLayoutResult? = null
 
     protected val primaryColor: Int
         get() = variant?.primaryColor ?: Color.parseColor("#FF69B4")
@@ -95,6 +96,7 @@ abstract class BaseEffectView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        currentMainTextLayout = null
         onDrawEffect(canvas)
         drawAmbientOverlay(canvas)
     }
@@ -230,8 +232,7 @@ abstract class BaseEffectView @JvmOverloads constructor(
         if (text.isEmpty()) return
 
         val style = resolveTextDecorStyle(textType)
-        val layoutMode = resolveTextLayoutMode(textType)
-        val layout = buildTextLayout(text, x, y, paint, textType, layoutMode)
+        val layout = buildResolvedTextLayout(text, x, y, paint, textType)
         drawTextPanel(
             canvas,
             layout.bounds.left,
@@ -243,6 +244,9 @@ abstract class BaseEffectView @JvmOverloads constructor(
             textType
         )
         drawStyledText(canvas, text, paint, style, textType, layout)
+        if (textType == ContrastTextType.MAIN) {
+            currentMainTextLayout = layout
+        }
     }
 
     private fun resolveTextDecorStyle(textType: ContrastTextType): TextDecorStyle {
@@ -393,6 +397,63 @@ abstract class BaseEffectView @JvmOverloads constructor(
         }
 
         return TextLayoutResult(glyphs, computeGlyphBounds(glyphs, paint, fontMetrics, textType))
+    }
+
+    private fun buildResolvedTextLayout(
+        text: String,
+        centerX: Float,
+        centerY: Float,
+        paint: Paint,
+        textType: ContrastTextType
+    ): TextLayoutResult {
+        if (textType == ContrastTextType.MAIN) {
+            val layoutMode = resolveTextLayoutMode(textType)
+            return buildTextLayout(text, centerX, centerY, paint, textType, layoutMode)
+        }
+
+        val mainLayout = currentMainTextLayout
+        val mainMode = resolveTextLayoutMode(ContrastTextType.MAIN)
+        if (mainLayout == null) {
+            return buildTextLayout(text, centerX, centerY, paint, textType, resolveTextLayoutMode(textType))
+        }
+
+        val safeLeft = dp(32f)
+        val safeRight = width - dp(32f)
+        val safeTop = dp(124f)
+        val safeBottom = height - dp(170f)
+        return when (mainMode) {
+            TextLayoutMode.VERTICAL_RIGHT -> {
+                val anchorX = (mainLayout.bounds.right + dp(34f)).coerceAtMost(safeRight - dp(10f))
+                val anchorY = mainLayout.bounds.centerY().coerceIn(safeTop, safeBottom)
+                buildTextLayout(text, anchorX, anchorY, paint, textType, TextLayoutMode.VERTICAL_RIGHT)
+            }
+
+            TextLayoutMode.VERTICAL_LEFT -> {
+                val anchorX = (mainLayout.bounds.left - dp(34f)).coerceAtLeast(safeLeft + dp(10f))
+                val anchorY = mainLayout.bounds.centerY().coerceIn(safeTop, safeBottom)
+                buildTextLayout(text, anchorX, anchorY, paint, textType, TextLayoutMode.VERTICAL_LEFT)
+            }
+
+            TextLayoutMode.ARC -> {
+                val anchorY = (mainLayout.bounds.bottom + dp(34f)).coerceAtMost(safeBottom)
+                buildTextLayout(text, centerX, anchorY, paint, textType, TextLayoutMode.CAPTION)
+            }
+
+            TextLayoutMode.WAVE -> {
+                val anchorY = (mainLayout.bounds.bottom + dp(28f)).coerceAtMost(safeBottom)
+                buildTextLayout(text, centerX, anchorY, paint, textType, TextLayoutMode.WAVE)
+            }
+
+            TextLayoutMode.SLANT -> {
+                val anchorY = (mainLayout.bounds.bottom + dp(26f)).coerceAtMost(safeBottom)
+                buildTextLayout(text, centerX, anchorY, paint, textType, TextLayoutMode.SLANT)
+            }
+
+            else -> {
+                val anchorY = (mainLayout.bounds.bottom + dp(28f)).coerceAtMost(safeBottom)
+                buildTextLayout(text, centerX, anchorY, paint, textType, TextLayoutMode.CAPTION)
+            }
+        }
     }
 
     private fun computeGlyphBounds(
