@@ -69,7 +69,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initMusic() {
-        if (!MusicManager.hasInitializedPlayback() || !MusicManager.isReady()) {
+        if (!MusicManager.hasInitializedPlayback() || !MusicManager.isReady() || MusicManager.getPlaylist().isEmpty()) {
             MusicManager.initAutoPlaylist(this)
             MusicManager.setPlayMode(MusicManager.PlayMode.LOOP)
             MusicManager.play()

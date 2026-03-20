@@ -36,7 +36,9 @@ class SplashActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_splash)
 
-        MusicManager.init(this)
+        MusicManager.initAutoPlaylist(this)
+        MusicManager.setPlayMode(MusicManager.PlayMode.LOOP)
+        MusicManager.play()
 
         initViews()
         startAnimations()
