@@ -15,7 +15,7 @@ class PlanRepository(context: Context) {
 
     companion object {
         private const val KEY_PLANS = "plans"
-        private val MAX_EFFECT_COUNT = EffectType.values().size
+        private const val MAX_EFFECT_COUNT = 8
     }
 
     fun getAllPlans(): List<LovePlan> {

@@ -45,7 +45,8 @@ class PlanEditorActivity : AppCompatActivity() {
     private val selectedTypes = mutableListOf<EffectType>()
     private val allTypes = EffectType.values().toList()
     private val themes = listOf<PlanTheme?>(null) + PlanTheme.values().toList()
-    private val requiredEffectCount = EffectType.values().size
+    private val minEffectCount = 5
+    private val maxEffectCount = 8
     private var songs: List<MusicManager.Song> = emptyList()
     private var editingPlanId: String? = null
 
@@ -133,10 +134,10 @@ class PlanEditorActivity : AppCompatActivity() {
         )
 
         availableAdapter = AvailableEffectsAdapter { type ->
-            if (selectedTypes.size >= requiredEffectCount) {
+            if (selectedTypes.size >= maxEffectCount) {
                 Toast.makeText(
                     this,
-                    "\u9700\u8981\u7f16\u6392 $requiredEffectCount \u4e2a\u7279\u6548",
+                    "\u6700\u591a\u53ef\u9009 $maxEffectCount \u4e2a\u7279\u6548",
                     Toast.LENGTH_SHORT
                 ).show()
             } else if (type !in selectedTypes) {
@@ -184,7 +185,6 @@ class PlanEditorActivity : AppCompatActivity() {
         etSubtitle.setText(theme.defaultSubtitle)
         selectedTypes.clear()
         selectedTypes.addAll(theme.recommendedEffects)
-        allTypes.filterNot { it in selectedTypes }.forEach { selectedTypes += it }
         refreshLists()
         updateThemeHint()
     }
@@ -201,7 +201,7 @@ class PlanEditorActivity : AppCompatActivity() {
         availableAdapter.submitList(
             allTypes,
             selectedTypes.toSet(),
-            selectedTypes.size >= requiredEffectCount
+            selectedTypes.size >= maxEffectCount
         )
     }
 
@@ -215,10 +215,10 @@ class PlanEditorActivity : AppCompatActivity() {
     }
 
     private fun savePlan() {
-        if (selectedTypes.size != requiredEffectCount) {
+        if (selectedTypes.size !in minEffectCount..maxEffectCount) {
             Toast.makeText(
                 this,
-                "\u8bf7\u5b8c\u6574\u7f16\u6392 $requiredEffectCount \u4e2a\u7279\u6548",
+                "\u8bf7\u9009\u62e9 $minEffectCount \u5230 $maxEffectCount \u4e2a\u7279\u6548",
                 Toast.LENGTH_SHORT
             ).show()
             return
