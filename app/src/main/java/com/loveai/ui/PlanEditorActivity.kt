@@ -148,8 +148,10 @@ class PlanEditorActivity : AppCompatActivity() {
 
         rvSelected.layoutManager = LinearLayoutManager(this)
         rvSelected.adapter = selectedAdapter
+        rvSelected.isNestedScrollingEnabled = true
         rvAvailable.layoutManager = LinearLayoutManager(this)
         rvAvailable.adapter = availableAdapter
+        rvAvailable.isNestedScrollingEnabled = true
         refreshLists()
     }
 
