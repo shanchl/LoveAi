@@ -106,7 +106,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:text="&#24050;&#36873;&#29305;&#25928;&#65288;&#38656;&#35201; 8 &#20010;&#65289;"
+            android:text="&#24050;&#36873;&#29305;&#25928;&#65288;&#38656;&#35201; 12 &#20010;&#65289;"
             android:textColor="#FFFFFF"
             android:textSize="18sp"
             android:textStyle="bold" />

@@ -166,7 +166,7 @@ object MusicManager {
 
     private fun setupMediaPlayer() {
         mediaPlayer?.apply {
-            isLooping = playMode == PlayMode.LOOP
+            isLooping = false
             setVolume(0.8f, 0.8f)
             isPrepared = true
         }
@@ -200,7 +200,7 @@ object MusicManager {
 
     fun setPlayMode(mode: PlayMode) {
         playMode = mode
-        mediaPlayer?.isLooping = mode == PlayMode.LOOP
+        mediaPlayer?.isLooping = false
     }
 
     fun getPlayMode(): PlayMode = playMode

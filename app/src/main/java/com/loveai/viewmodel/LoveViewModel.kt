@@ -79,7 +79,7 @@ class LoveViewModel(application: Application) : AndroidViewModel(application) {
             name = "\u9884\u89c8\u65b9\u6848",
             title = title,
             subtitle = subtitle,
-            effectTypes = effectTypes.take(8),
+            effectTypes = effectTypes.take(EffectType.values().size),
             createdAt = System.currentTimeMillis()
         )
     }

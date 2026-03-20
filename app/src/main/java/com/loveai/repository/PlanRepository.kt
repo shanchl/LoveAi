@@ -15,6 +15,7 @@ class PlanRepository(context: Context) {
 
     companion object {
         private const val KEY_PLANS = "plans"
+        private val MAX_EFFECT_COUNT = EffectType.values().size
     }
 
     fun getAllPlans(): List<LovePlan> {
@@ -47,7 +48,7 @@ class PlanRepository(context: Context) {
             name = name.ifBlank { "\u6211\u7684\u65b9\u6848" },
             title = title.ifBlank { "\u7ed9\u4f60\u7684\u6d6a\u6f2b\u7247\u6bb5" },
             subtitle = subtitle,
-            effectTypes = effectTypes.take(8),
+            effectTypes = effectTypes.take(MAX_EFFECT_COUNT),
             themeKey = themeKey,
             songKey = songKey,
             createdAt = System.currentTimeMillis()
@@ -106,7 +107,7 @@ class PlanRepository(context: Context) {
             name = obj.optString("name"),
             title = obj.optString("title"),
             subtitle = obj.optString("subtitle"),
-            effectTypes = types.take(8),
+            effectTypes = types.take(MAX_EFFECT_COUNT),
             themeKey = obj.optString("themeKey").ifBlank { null },
             songKey = obj.optString("songKey").ifBlank { null },
             createdAt = obj.optLong("createdAt")
