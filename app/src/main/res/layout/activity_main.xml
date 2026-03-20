@@ -6,7 +6,6 @@
     android:background="#0D0D0D"
     tools:context=".ui.MainActivity">
 
-    <!-- ViewPager2 容器 -->
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/viewPager"
         android:layout_width="match_parent"
@@ -15,46 +14,66 @@
         android:clipToPadding="false"
         android:overScrollMode="never" />
 
-    <!-- 顶部工具栏 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="top"
         android:layout_marginTop="40dp"
+        android:gravity="end|center_vertical"
         android:orientation="horizontal"
         android:padding="16dp">
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
+        <Button
+            android:id="@+id/btnPlanEditor"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_toolbar_pill"
+            android:minWidth="0dp"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:text="&#32534;&#25490;"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp" />
 
-        <!-- 音乐按钮 -->
+        <Button
+            android:id="@+id/btnPlanLibrary"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_marginEnd="12dp"
+            android:background="@drawable/bg_toolbar_pill"
+            android:minWidth="0dp"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:text="&#26041;&#26696;&#24211;"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp" />
+
         <ImageButton
             android:id="@+id/btnMusic"
             android:layout_width="44dp"
             android:layout_height="44dp"
             android:layout_marginEnd="12dp"
             android:background="@drawable/bg_circle_button"
+            android:contentDescription="Music toggle"
+            android:padding="10dp"
             android:src="@drawable/ic_music"
-            android:tint="#FFFFFF"
-            android:contentDescription="音乐开关"
-            android:padding="10dp" />
+            android:tint="#FFFFFF" />
 
-        <!-- 收藏列表按钮 -->
         <ImageButton
             android:id="@+id/btnFavorites"
             android:layout_width="44dp"
             android:layout_height="44dp"
             android:background="@drawable/bg_circle_button"
-            android:src="@drawable/ic_heart"
-            android:tint="#FFFFFF"
             android:contentDescription="@string/favorite"
-            android:padding="10dp" />
+            android:padding="10dp"
+            android:src="@drawable/ic_heart"
+            android:tint="#FFFFFF" />
 
     </LinearLayout>
 
-    <!-- 底部控制栏 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -64,29 +83,26 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <!-- 指示器圆点 -->
         <LinearLayout
             android:id="@+id/indicatorContainer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center" />
+            android:gravity="center"
+            android:orientation="horizontal" />
 
-        <!-- 暂停/播放按钮 -->
         <ImageButton
             android:id="@+id/btnPlayPause"
             android:layout_width="56dp"
             android:layout_height="56dp"
             android:layout_marginTop="16dp"
             android:background="@drawable/bg_circle_button"
-            android:src="@drawable/ic_pause"
-            android:tint="#FFFFFF"
             android:contentDescription="@string/tap_to_pause"
-            android:padding="14dp" />
+            android:padding="14dp"
+            android:src="@drawable/ic_pause"
+            android:tint="#FFFFFF" />
 
     </LinearLayout>
 
-    <!-- 底部音乐控制栏 -->
     <LinearLayout
         android:id="@+id/musicControlBar"
         android:layout_width="match_parent"
@@ -96,21 +112,18 @@
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:layout_marginBottom="0dp">
+        android:paddingEnd="12dp">
 
-        <!-- 上一首按钮 -->
         <ImageButton
             android:id="@+id/btnPrev"
             android:layout_width="36dp"
             android:layout_height="36dp"
             android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Previous song"
+            android:padding="6dp"
             android:src="@drawable/ic_prev"
-            android:tint="#FFFFFF"
-            android:contentDescription="上一首"
-            android:padding="6dp" />
+            android:tint="#FFFFFF" />
 
-        <!-- 播放/暂停按钮 -->
         <ImageButton
             android:id="@+id/btnPlayPauseMusic"
             android:layout_width="40dp"
@@ -118,12 +131,11 @@
             android:layout_marginStart="8dp"
             android:layout_marginEnd="8dp"
             android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Play or pause music"
+            android:padding="8dp"
             android:src="@drawable/ic_play"
-            android:tint="#FFFFFF"
-            android:contentDescription="播放/暂停"
-            android:padding="8dp" />
+            android:tint="#FFFFFF" />
 
-        <!-- 歌曲名称 -->
         <TextView
             android:id="@+id/tvSongName"
             android:layout_width="0dp"
@@ -136,32 +148,29 @@
             android:textColor="#FFFFFF"
             android:textSize="14sp" />
 
-        <!-- 下一首按钮 -->
         <ImageButton
             android:id="@+id/btnNext"
             android:layout_width="36dp"
             android:layout_height="36dp"
             android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Next song"
+            android:padding="6dp"
             android:src="@drawable/ic_next"
-            android:tint="#FFFFFF"
-            android:contentDescription="下一首"
-            android:padding="6dp" />
+            android:tint="#FFFFFF" />
 
-        <!-- 播放列表按钮 -->
         <ImageButton
             android:id="@+id/btnPlaylist"
             android:layout_width="36dp"
             android:layout_height="36dp"
             android:layout_marginStart="8dp"
             android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Playlist"
+            android:padding="6dp"
             android:src="@drawable/ic_music"
-            android:tint="#FFFFFF"
-            android:contentDescription="播放列表"
-            android:padding="6dp" />
+            android:tint="#FFFFFF" />
 
     </LinearLayout>
 
-    <!-- 收藏按钮（固定在右下角） -->
     <ImageButton
         android:id="@+id/btnFavorite"
         android:layout_width="60dp"
@@ -170,28 +179,27 @@
         android:layout_marginEnd="20dp"
         android:layout_marginBottom="140dp"
         android:background="@drawable/bg_circle_heart"
-        android:src="@drawable/ic_heart"
-        android:tint="#FFFFFF"
         android:contentDescription="@string/favorite"
-        android:padding="16dp" />
+        android:padding="16dp"
+        android:src="@drawable/ic_heart"
+        android:tint="#FFFFFF" />
 
-    <!-- 重播按钮容器 -->
     <LinearLayout
         android:id="@+id/replayContainer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:orientation="vertical"
-        android:gravity="center"
+        android:alpha="0"
         android:background="@drawable/bg_replay_panel"
+        android:gravity="center"
+        android:orientation="vertical"
         android:padding="24dp"
-        android:visibility="gone"
-        android:alpha="0">
+        android:visibility="gone">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="💕 本轮展示结束 💕"
+            android:text="&#26412;&#36718;&#23637;&#31034;&#32467;&#26463;"
             android:textColor="#FFFFFF"
             android:textSize="18sp"
             android:textStyle="bold" />
@@ -200,7 +208,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:text="感谢你陪我走过这段旅程"
+            android:text="&#24863;&#35874;&#20320;&#38506;&#25105;&#36208;&#23436;&#36825;&#19968;&#27573;&#28010;&#28459;&#26053;&#31243;"
             android:textColor="#CCCCCC"
             android:textSize="14sp" />
 
@@ -210,14 +218,14 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:background="@drawable/bg_replay_button"
-            android:text="再看一轮 ❤️"
+            android:paddingStart="32dp"
+            android:paddingTop="12dp"
+            android:paddingEnd="32dp"
+            android:paddingBottom="12dp"
+            android:text="&#37325;&#26032;&#25773;&#25918;"
             android:textColor="#FFFFFF"
             android:textSize="16sp"
-            android:textStyle="bold"
-            android:paddingStart="32dp"
-            android:paddingEnd="32dp"
-            android:paddingTop="12dp"
-            android:paddingBottom="12dp" />
+            android:textStyle="bold" />
 
     </LinearLayout>
 

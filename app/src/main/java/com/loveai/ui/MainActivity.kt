@@ -8,15 +8,14 @@ import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowManager
 import android.widget.Button
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -25,28 +24,42 @@ import com.loveai.R
 import com.loveai.manager.MusicManager
 import com.loveai.model.Effect
 import com.loveai.model.EffectType
-import com.loveai.ui.effects.*
+import com.loveai.repository.PlanRepository
+import com.loveai.ui.effects.AuroraEffect
+import com.loveai.ui.effects.BaseEffectView
+import com.loveai.ui.effects.BubbleFloatEffect
+import com.loveai.ui.effects.ButterflyEffect
+import com.loveai.ui.effects.FireworkEffect
+import com.loveai.ui.effects.HeartPulseEffect
+import com.loveai.ui.effects.HeartRainEffect
+import com.loveai.ui.effects.MeteorShowerEffect
+import com.loveai.ui.effects.PetalFallEffect
+import com.loveai.ui.effects.RippleEffect
+import com.loveai.ui.effects.SnowFallEffect
+import com.loveai.ui.effects.StarrySkyEffect
+import com.loveai.ui.effects.TypewriterEffect
 import com.loveai.viewmodel.LoveViewModel
-import com.loveai.ui.EndingActivity
 
 class MainActivity : AppCompatActivity() {
 
     companion object {
+        const val EXTRA_PLAN_ID = "plan_id"
         private const val ENDING_PAGE_MIN_STAY_MS = 10_000L
     }
 
     private lateinit var viewModel: LoveViewModel
+    private lateinit var planRepository: PlanRepository
     private lateinit var viewPager: ViewPager2
     private lateinit var indicatorContainer: LinearLayout
     private lateinit var btnPlayPause: ImageButton
     private lateinit var btnFavorite: ImageButton
     private lateinit var btnFavorites: ImageButton
     private lateinit var btnMusic: ImageButton
+    private lateinit var btnPlanEditor: Button
+    private lateinit var btnPlanLibrary: Button
     private lateinit var replayContainer: LinearLayout
     private lateinit var btnReplay: Button
     private lateinit var adapter: EffectPagerAdapter
-    
-    // 音乐控制相关
     private lateinit var btnPrev: ImageButton
     private lateinit var btnNext: ImageButton
     private lateinit var btnPlayPauseMusic: ImageButton
@@ -62,8 +75,11 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         viewModel = ViewModelProvider(this)[LoveViewModel::class.java]
+        planRepository = PlanRepository(this)
+
         initMusic()
         initViews()
+        loadRequestedPlanIfPresent()
         observeData()
         startAutoSlide()
     }
@@ -73,37 +89,31 @@ class MainActivity : AppCompatActivity() {
             MusicManager.initAutoPlaylist(this)
             MusicManager.setPlayMode(MusicManager.PlayMode.LOOP)
             MusicManager.play()
-            return
         }
     }
 
     private fun initViews() {
-        viewPager = findViewById<ViewPager2>(R.id.viewPager)
-        indicatorContainer = findViewById<LinearLayout>(R.id.indicatorContainer)
-        btnPlayPause = findViewById<ImageButton>(R.id.btnPlayPause)
-        btnFavorite = findViewById<ImageButton>(R.id.btnFavorite)
-        btnFavorites = findViewById<ImageButton>(R.id.btnFavorites)
-        btnMusic = findViewById<ImageButton>(R.id.btnMusic)
-        replayContainer = findViewById<LinearLayout>(R.id.replayContainer)
-        btnReplay = findViewById<Button>(R.id.btnReplay)
-        
-        // 音乐控制按钮
-        btnPrev = findViewById<ImageButton>(R.id.btnPrev)
-        btnNext = findViewById<ImageButton>(R.id.btnNext)
-        btnPlayPauseMusic = findViewById<ImageButton>(R.id.btnPlayPauseMusic)
-        btnPlaylist = findViewById<ImageButton>(R.id.btnPlaylist)
-        tvSongName = findViewById<TextView>(R.id.tvSongName)
+        viewPager = findViewById(R.id.viewPager)
+        indicatorContainer = findViewById(R.id.indicatorContainer)
+        btnPlayPause = findViewById(R.id.btnPlayPause)
+        btnFavorite = findViewById(R.id.btnFavorite)
+        btnFavorites = findViewById(R.id.btnFavorites)
+        btnMusic = findViewById(R.id.btnMusic)
+        btnPlanEditor = findViewById(R.id.btnPlanEditor)
+        btnPlanLibrary = findViewById(R.id.btnPlanLibrary)
+        replayContainer = findViewById(R.id.replayContainer)
+        btnReplay = findViewById(R.id.btnReplay)
+        btnPrev = findViewById(R.id.btnPrev)
+        btnNext = findViewById(R.id.btnNext)
+        btnPlayPauseMusic = findViewById(R.id.btnPlayPauseMusic)
+        btnPlaylist = findViewById(R.id.btnPlaylist)
+        tvSongName = findViewById(R.id.tvSongName)
 
         adapter = EffectPagerAdapter()
         viewPager.adapter = adapter
-        
-        // 禁用 RecyclerView 的 item 动画，避免影响页面切换效果
+
         (viewPager.getChildAt(0) as? RecyclerView)?.itemAnimator = null
-        
-        // 设置 ViewPager 缓存页面数，避免动画问题
         viewPager.offscreenPageLimit = 1
-        
-        // 应用随机页面切换动画
         PageTransitionManager.applyRandomTransition(viewPager)
 
         viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
@@ -111,29 +121,17 @@ class MainActivity : AppCompatActivity() {
                 viewModel.setCurrentIndex(position)
                 updateIndicators(position)
                 checkIfFinished(position)
-                
-                // 用户手动滑动后，重置自动轮播计时
+
                 if (viewModel.isPlaying.value == true && !hasFinished) {
                     stopAutoSlide()
-                    handler.postDelayed(autoSlideRunnable!!, viewModel.getAutoSlideInterval())
-                }
-            }
-            
-            override fun onPageScrollStateChanged(state: Int) {
-                // 滑动开始时暂停自动轮播，避免冲突
-                if (state == ViewPager2.SCROLL_STATE_DRAGGING) {
-                    // 可以选择暂停，松开后会在 onPageSelected 中恢复
+                    autoSlideRunnable?.let { handler.postDelayed(it, viewModel.getAutoSlideInterval()) }
                 }
             }
         })
 
         btnPlayPause.setOnClickListener {
             viewModel.togglePlayPause()
-            if (viewModel.isPlaying.value == true) {
-                startAutoSlide()
-            } else {
-                stopAutoSlide()
-            }
+            if (viewModel.isPlaying.value == true) startAutoSlide() else stopAutoSlide()
         }
 
         btnFavorite.setOnClickListener {
@@ -142,66 +140,74 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnFavorites.setOnClickListener {
-            val intent = Intent(this, FavoriteActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, FavoriteActivity::class.java))
         }
 
         btnMusic.setOnClickListener {
             val isPlaying = MusicManager.toggle()
             btnMusic.alpha = if (isPlaying) 1f else 0.5f
             updateMusicUI()
-            Toast.makeText(this, if (isPlaying) "音乐已开启" else "音乐已关闭", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                this,
+                if (isPlaying) "\u97f3\u4e50\u5df2\u5f00\u542f" else "\u97f3\u4e50\u5df2\u5173\u95ed",
+                Toast.LENGTH_SHORT
+            ).show()
         }
 
-        btnReplay.setOnClickListener {
-            replay()
+        btnPlanEditor.setOnClickListener {
+            startActivity(Intent(this, PlanEditorActivity::class.java))
         }
-        
-        // 音乐控制按钮事件
+
+        btnPlanLibrary.setOnClickListener {
+            startActivity(Intent(this, PlanLibraryActivity::class.java))
+        }
+
+        btnReplay.setOnClickListener { replay() }
+
         btnPrev.setOnClickListener {
             MusicManager.previous()
             updateMusicUI()
         }
-        
+
         btnNext.setOnClickListener {
             MusicManager.next()
             updateMusicUI()
         }
-        
+
         btnPlayPauseMusic.setOnClickListener {
             MusicManager.toggle()
             btnMusic.alpha = if (MusicManager.isMusicPlaying()) 1f else 0.5f
             updateMusicUI()
         }
-        
-        btnPlaylist.setOnClickListener {
-            showPlaylistDialog()
-        }
 
-        // 初始化音乐按钮状态
+        btnPlaylist.setOnClickListener { showPlaylistDialog() }
+
         btnMusic.alpha = if (MusicManager.isMusicPlaying()) 1f else 0.5f
         updateMusicUI()
         viewPager.alpha = 1f
     }
-    
+
+    private fun loadRequestedPlanIfPresent() {
+        val planId = intent.getStringExtra(EXTRA_PLAN_ID) ?: return
+        val plan = planRepository.getPlanById(planId) ?: return
+        viewModel.loadPlan(plan)
+    }
+
     private fun updateMusicUI() {
         tvSongName.text = MusicManager.getCurrentSongName()
         btnPlayPauseMusic.setImageResource(
             if (MusicManager.isMusicPlaying()) R.drawable.ic_pause else R.drawable.ic_play
         )
     }
-    
+
     private fun showPlaylistDialog() {
         val playlist = MusicManager.getPlaylist()
         if (playlist.isEmpty()) {
-            Toast.makeText(this, "暂无播放列表", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "\u6682\u65e0\u64ad\u653e\u5217\u8868", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // 暂停自动轮播
         stopAutoSlide()
-        
-        // 禁用 ViewPager 绘制缓存，避免动画问题
         viewPager.isDrawingCacheEnabled = false
 
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_playlist, null)
@@ -209,35 +215,24 @@ class MainActivity : AppCompatActivity() {
         val tvPlayMode = dialogView.findViewById<TextView>(R.id.tvPlayMode)
         val btnClose = dialogView.findViewById<Button>(R.id.btnClose)
 
-        // 显示当前播放模式
         updatePlayModeText(tvPlayMode)
 
-        // 设置RecyclerView
         rvPlaylist.layoutManager = LinearLayoutManager(this)
-        val adapter = PlaylistAdapter(playlist, MusicManager.getCurrentSongIndex()) { position ->
+        val playlistAdapter = PlaylistAdapter(playlist, MusicManager.getCurrentSongIndex()) { position ->
             MusicManager.playByIndex(position)
             updateMusicUI()
-            // 切换歌曲后刷新 ViewPager 视图状态
             viewPager.requestLayout()
         }
-        rvPlaylist.adapter = adapter
+        rvPlaylist.adapter = playlistAdapter
 
-        // 创建Dialog
         val dialog = AlertDialog.Builder(this, R.style.Theme_App_Dialog)
             .setView(dialogView)
             .create()
 
-        // 关闭按钮
-        btnClose.setOnClickListener {
-            dialog.dismiss()
-        }
-
-        // 点击外部关闭
+        btnClose.setOnClickListener { dialog.dismiss() }
         dialog.setOnDismissListener {
             updateMusicUI()
-            // 恢复 ViewPager 状态
             viewPager.isDrawingCacheEnabled = true
-            // 恢复自动轮播
             if (viewModel.isPlaying.value == true) {
                 startAutoSlide()
             }
@@ -247,15 +242,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updatePlayModeText(tvPlayMode: TextView) {
-        val mode = MusicManager.getPlayMode()
-        tvPlayMode.text = when (mode) {
-            MusicManager.PlayMode.LOOP -> "列表循环"
-            MusicManager.PlayMode.SINGLE -> "单曲循环"
-            MusicManager.PlayMode.RANDOM -> "随机播放"
+        tvPlayMode.text = when (MusicManager.getPlayMode()) {
+            MusicManager.PlayMode.LOOP -> "\u5217\u8868\u5faa\u73af"
+            MusicManager.PlayMode.SINGLE -> "\u5355\u66f2\u5faa\u73af"
+            MusicManager.PlayMode.RANDOM -> "\u968f\u673a\u64ad\u653e"
         }
     }
 
-    // 播放列表适配器
     inner class PlaylistAdapter(
         private val songs: List<MusicManager.Song>,
         private var currentIndex: Int,
@@ -277,10 +270,8 @@ class MainActivity : AppCompatActivity() {
             val song = songs[position]
             holder.tvSongName.text = song.name
             holder.ivPlaying.visibility = if (position == currentIndex) View.VISIBLE else View.GONE
-            
-            // 当前播放的歌曲高亮
             holder.tvSongName.alpha = if (position == currentIndex) 1f else 0.7f
-            
+
             holder.itemView.setOnClickListener {
                 currentIndex = position
                 onItemClick(position)
@@ -288,7 +279,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        override fun getItemCount() = songs.size
+        override fun getItemCount(): Int = songs.size
     }
 
     private fun observeData() {
@@ -297,6 +288,7 @@ class MainActivity : AppCompatActivity() {
             setupIndicators(effects.size)
             hasFinished = false
             replayContainer.visibility = View.GONE
+            updateFavoriteButtonState()
         }
 
         viewModel.currentIndex.observe(this) { index ->
@@ -308,57 +300,42 @@ class MainActivity : AppCompatActivity() {
         }
 
         viewModel.isPlaying.observe(this) { isPlaying ->
-            btnPlayPause.setImageResource(
-                if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play
-            )
+            btnPlayPause.setImageResource(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play)
         }
     }
 
     private fun checkIfFinished(position: Int) {
         val effects = viewModel.effects.value ?: return
-        // 检查是否到达最后一个效果
         if (position == effects.size - 1 && !hasFinished) {
             hasFinished = true
             stopAutoSlide()
             viewModel.stopAutoSlide()
-            
-            // 延迟2秒后跳转到结尾页面，让用户看完最后一个特效
-            handler.postDelayed({
-                startEndingActivity()
-            }, ENDING_PAGE_MIN_STAY_MS)
+            handler.postDelayed({ startEndingActivity() }, ENDING_PAGE_MIN_STAY_MS)
         }
     }
 
     private fun startEndingActivity() {
-        val intent = Intent(this, EndingActivity::class.java)
-        startActivity(intent)
+        val endingIntent = Intent(this, EndingActivity::class.java)
+        viewModel.getCurrentPlan()?.id?.let { endingIntent.putExtra(EXTRA_PLAN_ID, it) }
+        startActivity(endingIntent)
         finish()
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 
     private fun replay() {
-        // 重新生成随机效果
-        viewModel.generateRandomEffects()
+        viewModel.replayCurrentSequence()
         hasFinished = false
-        
-        // 隐藏重播按钮
+
         replayContainer.animate()
             .alpha(0f)
             .scaleX(0.8f)
             .scaleY(0.8f)
             .setDuration(300)
-            .withEndAction {
-                replayContainer.visibility = View.GONE
-            }
+            .withEndAction { replayContainer.visibility = View.GONE }
             .start()
-        
-        // 重置 ViewPager 状态
-        viewPager.setCurrentItem(0, false)  // false 表示不带动画
-        
-        // 重新应用切换动画（避免动画状态问题）
+
+        viewPager.setCurrentItem(0, false)
         PageTransitionManager.applyRandomTransition(viewPager)
-        
-        // 重新开始自动播放
         viewModel.startAutoSlide()
         startAutoSlide()
     }
@@ -394,7 +371,6 @@ class MainActivity : AppCompatActivity() {
     private fun animateFavoriteButton() {
         val effect = viewModel.getCurrentEffect()
         if (effect?.isFavorite == true) {
-            // 收藏成功动画
             val scaleX = ObjectAnimator.ofFloat(btnFavorite, "scaleX", 1f, 1.3f, 1f)
             val scaleY = ObjectAnimator.ofFloat(btnFavorite, "scaleY", 1f, 1.3f, 1f)
             scaleX.duration = 300
@@ -406,7 +382,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun switchToNextPageWithFade(nextIndex: Int) {
-        // 先取消可能残留的动画，避免连续触发时叠加
         viewPager.animate().cancel()
         viewPager.pivotX = viewPager.width / 2f
         viewPager.pivotY = viewPager.height / 2f
@@ -419,11 +394,7 @@ class MainActivity : AppCompatActivity() {
             .setDuration(820)
             .withEndAction {
                 if (isFinishing || isDestroyed) return@withEndAction
-
-                // 直接切页，不使用 ViewPager 默认平滑滚动
                 viewPager.setCurrentItem(nextIndex, false)
-
-                // 切过去后再淡入
                 viewPager.animate()
                     .alpha(1f)
                     .scaleX(1f)
@@ -436,29 +407,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startAutoSlide() {
-        // 先停止已有的轮播，避免重复
         stopAutoSlide()
-        
         autoSlideRunnable = object : Runnable {
             override fun run() {
                 if (viewModel.isPlaying.value == true && !hasFinished) {
                     val currentIndex = viewPager.currentItem
                     val effects = viewModel.effects.value ?: return
-                    
-                    // 如果还有下一个效果，继续切换
                     if (currentIndex < effects.size - 1) {
                         switchToNextPageWithFade(currentIndex + 1)
-                        // 每次切换后都重新设置延时，确保固定的10秒间隔
                         handler.postDelayed(this, viewModel.getAutoSlideInterval())
                     } else {
-                        // 到达最后一个效果，停止自动切换
                         checkIfFinished(currentIndex)
                     }
                 }
             }
         }
-        // 首次启动也延时，确保稳定
-        handler.postDelayed(autoSlideRunnable!!, viewModel.getAutoSlideInterval())
+        autoSlideRunnable?.let { handler.postDelayed(it, viewModel.getAutoSlideInterval()) }
     }
 
     private fun stopAutoSlide() {
@@ -483,11 +447,8 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         stopAutoSlide()
         handler.removeCallbacksAndMessages(null)
-        // 注意：这里不停止音乐，让它在后台继续播放
-        // MusicManager.release() // 注释掉，音乐保留给EndingActivity
     }
 
-    // ViewPager2 适配器
     inner class EffectPagerAdapter : RecyclerView.Adapter<EffectViewHolder>() {
         private var effects: List<Effect> = emptyList()
 

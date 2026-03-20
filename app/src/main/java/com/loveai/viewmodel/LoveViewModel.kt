@@ -5,40 +5,33 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.loveai.model.Effect
+import com.loveai.model.EffectType
+import com.loveai.model.LovePlan
 import com.loveai.repository.EffectRepository
 import com.loveai.repository.FavoriteRepository
 
-/**
- * LoveAI 主 ViewModel
- * 管理效果展示、轮播、收藏等业务逻辑
- */
 class LoveViewModel(application: Application) : AndroidViewModel(application) {
 
     private val effectRepository = EffectRepository()
     private val favoriteRepository = FavoriteRepository(application)
+    private var activePlan: LovePlan? = null
 
-    // 当前展示的效果列表
     private val _effects = MutableLiveData<List<Effect>>()
     val effects: LiveData<List<Effect>> = _effects
 
-    // 当前展示的效果索引
     private val _currentIndex = MutableLiveData<Int>()
     val currentIndex: LiveData<Int> = _currentIndex
 
-    // 是否正在自动播放
     private val _isPlaying = MutableLiveData<Boolean>()
     val isPlaying: LiveData<Boolean> = _isPlaying
 
-    // 收藏数量
     private val _favoriteCount = MutableLiveData<Int>()
     val favoriteCount: LiveData<Int> = _favoriteCount
 
-    // 收藏列表
     private val _favoriteEffects = MutableLiveData<List<Effect>>()
     val favoriteEffects: LiveData<List<Effect>> = _favoriteEffects
 
-    // 自动轮播间隔（毫秒）- 至少8秒，确保每个页面有足够停留时间
-    private var autoSlideInterval: Long = 10000L // 10秒，满足不少于8秒的要求
+    private var autoSlideInterval: Long = 10_000L
 
     init {
         _currentIndex.value = 0
@@ -48,13 +41,9 @@ class LoveViewModel(application: Application) : AndroidViewModel(application) {
         updateFavoriteCount()
     }
 
-    /**
-     * 生成随机效果（固定8个）
-     */
     fun generateRandomEffects() {
-        val count = 8
-        val newEffects = effectRepository.getRandomEffects(count)
-        // 恢复收藏状态
+        activePlan = null
+        val newEffects = effectRepository.getRandomEffects(8)
         val updatedEffects = newEffects.map { effect ->
             effect.copy(isFavorite = favoriteRepository.isFavorite(effect.variant.id))
         }
@@ -62,9 +51,39 @@ class LoveViewModel(application: Application) : AndroidViewModel(application) {
         _currentIndex.value = 0
     }
 
-    /**
-     * 跳转到下一个效果
-     */
+    fun loadPlan(plan: LovePlan) {
+        activePlan = plan
+        val newEffects = effectRepository.getEffectsByTypes(
+            types = plan.effectTypes,
+            titleOverride = plan.title,
+            subtitleOverride = plan.subtitle
+        )
+        val updatedEffects = newEffects.map { effect ->
+            effect.copy(isFavorite = favoriteRepository.isFavorite(effect.variant.id))
+        }
+        _effects.value = updatedEffects
+        _currentIndex.value = 0
+    }
+
+    fun replayCurrentSequence() {
+        activePlan?.let {
+            loadPlan(it)
+        } ?: generateRandomEffects()
+    }
+
+    fun getCurrentPlan(): LovePlan? = activePlan
+
+    fun buildPreviewPlan(title: String, subtitle: String, effectTypes: List<EffectType>): LovePlan {
+        return LovePlan(
+            id = "preview",
+            name = "\u9884\u89c8\u65b9\u6848",
+            title = title,
+            subtitle = subtitle,
+            effectTypes = effectTypes.take(8),
+            createdAt = System.currentTimeMillis()
+        )
+    }
+
     fun nextEffect() {
         val current = _currentIndex.value ?: 0
         val total = _effects.value?.size ?: 0
@@ -73,9 +92,6 @@ class LoveViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * 跳转到上一个效果
-     */
     fun previousEffect() {
         val current = _currentIndex.value ?: 0
         val total = _effects.value?.size ?: 0
@@ -84,9 +100,6 @@ class LoveViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * 跳转到指定索引
-     */
     fun setCurrentIndex(index: Int) {
         val total = _effects.value?.size ?: 0
         if (index in 0 until total) {
@@ -94,33 +107,20 @@ class LoveViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * 切换播放/暂停
-     */
     fun togglePlayPause() {
         _isPlaying.value = !(_isPlaying.value ?: true)
     }
 
-    /**
-     * 开始自动播放
-     */
     fun startAutoSlide() {
         _isPlaying.value = true
     }
 
-    /**
-     * 停止自动播放
-     */
     fun stopAutoSlide() {
         _isPlaying.value = false
     }
 
-    /**
-     * 切换收藏状态（通过 variantId）
-     */
     fun toggleFavoriteByVariantId(variantId: Int) {
         val isFav = favoriteRepository.toggleFavorite(variantId)
-        // 更新效果列表中的收藏状态
         _effects.value = _effects.value?.map { effect ->
             if (effect.variant.id == variantId) {
                 effect.copy(isFavorite = isFav)
@@ -131,9 +131,6 @@ class LoveViewModel(application: Application) : AndroidViewModel(application) {
         updateFavoriteCount()
     }
 
-    /**
-     * 收藏当前效果
-     */
     fun toggleCurrentFavorite() {
         val current = _currentIndex.value ?: 0
         val effects = _effects.value ?: return
@@ -142,38 +139,23 @@ class LoveViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * 获取当前效果
-     */
     fun getCurrentEffect(): Effect? {
         val current = _currentIndex.value ?: 0
         val effects = _effects.value ?: return null
         return if (current in effects.indices) effects[current] else null
     }
 
-    /**
-     * 更新收藏数量
-     */
     private fun updateFavoriteCount() {
         _favoriteCount.value = favoriteRepository.getFavoriteCount()
     }
 
-    /**
-     * 加载收藏列表
-     */
     fun loadFavorites() {
         _favoriteEffects.value = favoriteRepository.getFavoriteEffects()
     }
 
-    /**
-     * 设置自动轮播间隔
-     */
     fun setAutoSlideInterval(intervalMs: Long) {
         autoSlideInterval = intervalMs
     }
 
-    /**
-     * 获取自动轮播间隔
-     */
     fun getAutoSlideInterval(): Long = autoSlideInterval
 }

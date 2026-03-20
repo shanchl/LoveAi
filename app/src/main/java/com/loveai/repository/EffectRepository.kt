@@ -3,7 +3,6 @@ package com.loveai.repository
 import com.loveai.model.Effect
 import com.loveai.model.EffectType
 import com.loveai.model.EffectVariant
-import com.loveai.model.LoveMessages
 import kotlin.random.Random
 
 /**
@@ -79,6 +78,26 @@ class EffectRepository {
         val timestamp = System.currentTimeMillis()
         
         return selectedVariants.mapIndexed { index, variant ->
+            Effect(
+                id = "effect_${variant.id}_${timestamp}_${Random.nextInt(10000)}",
+                variant = variant,
+                isFavorite = false
+            )
+        }
+    }
+
+    fun getEffectsByTypes(
+        types: List<EffectType>,
+        titleOverride: String? = null,
+        subtitleOverride: String? = null
+    ): List<Effect> {
+        val timestamp = System.currentTimeMillis()
+        return types.map { type ->
+            val baseEffect = getEffectByType(type)
+            val variant = baseEffect.variant.copy(
+                message = titleOverride?.takeIf { it.isNotBlank() } ?: baseEffect.variant.message,
+                subMessage = subtitleOverride ?: baseEffect.variant.subMessage
+            )
             Effect(
                 id = "effect_${variant.id}_${timestamp}_${Random.nextInt(10000)}",
                 variant = variant,

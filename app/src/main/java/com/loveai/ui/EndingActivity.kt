@@ -2,6 +2,7 @@ package com.loveai.ui
 
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
+import android.content.Context
 import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.Color
@@ -15,7 +16,6 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageButton
-import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.loveai.R
@@ -23,9 +23,6 @@ import com.loveai.manager.MusicManager
 import kotlin.math.sin
 import kotlin.random.Random
 
-/**
- * 结尾页，负责做收尾展示、提供 Replay/Share 入口并延续音乐。
- */
 class EndingActivity : AppCompatActivity() {
 
     private lateinit var heartContainer: FrameLayout
@@ -36,7 +33,6 @@ class EndingActivity : AppCompatActivity() {
     private lateinit var btnShare: Button
     private lateinit var btnPlayPause: ImageButton
     private lateinit var tvMusicName: TextView
-    private lateinit var musicControlBar: LinearLayout
     private lateinit var contentPanel: View
     private lateinit var haloView: View
 
@@ -80,15 +76,14 @@ class EndingActivity : AppCompatActivity() {
         btnShare = findViewById(R.id.btnShare)
         btnPlayPause = findViewById(R.id.btnPlayPause)
         tvMusicName = findViewById(R.id.tvMusicName)
-        musicControlBar = findViewById(R.id.musicControlBar)
         contentPanel = findViewById(R.id.contentPanel)
         haloView = findViewById(R.id.vHalo)
 
         val messages = listOf(
-            "谢谢你把这一程慢慢看完。\n有些心动，本来就值得停留得更久一点。",
-            "故事走到这里，不必急着散场。\n余温还在，爱意也还在。",
-            "如果浪漫有尾声。\n我更希望它像现在这样，轻一点，久一点。",
-            "这一页不是结束。\n只是把想说的话，再认真说一遍。"
+            "\u8c22\u8c22\u4f60\u628a\u8fd9\u4e00\u7a0b\u6162\u6162\u770b\u5b8c\u3002\n\u6709\u4e9b\u5fc3\u52a8\uff0c\u672c\u6765\u5c31\u503c\u5f97\u505c\u7559\u5f97\u66f4\u4e45\u4e00\u70b9\u3002",
+            "\u6545\u4e8b\u8d70\u5230\u8fd9\u91cc\uff0c\u4e0d\u5fc5\u6025\u7740\u6563\u573a\u3002\n\u4f59\u6e29\u8fd8\u5728\uff0c\u7231\u610f\u4e5f\u8fd8\u5728\u3002",
+            "\u5982\u679c\u6d6a\u6f2b\u6709\u5c3e\u58f0\u3002\n\u6211\u66f4\u5e0c\u671b\u5b83\u50cf\u73b0\u5728\u8fd9\u6837\uff0c\u8f7b\u4e00\u70b9\uff0c\u4e45\u4e00\u70b9\u3002",
+            "\u8fd9\u4e00\u9875\u4e0d\u662f\u7ed3\u675f\u3002\n\u53ea\u662f\u628a\u60f3\u8bf4\u7684\u8bdd\uff0c\u518d\u8ba4\u771f\u8bf4\u4e00\u904d\u3002"
         )
         tvMessage.text = messages.random()
 
@@ -146,7 +141,6 @@ class EndingActivity : AppCompatActivity() {
             btnReplay.translationX = -40f
             btnShare.alpha = 0f
             btnShare.translationX = 40f
-
             btnReplay.animate().alpha(1f).translationX(0f).setDuration(520L).start()
             btnShare.animate().alpha(1f).translationX(0f).setDuration(520L).start()
         }, 520L)
@@ -181,7 +175,7 @@ class EndingActivity : AppCompatActivity() {
                 handler.postDelayed(this, 33L)
             }
         }
-        handler.post(heartRunnable!!)
+        heartRunnable?.let { handler.post(it) }
     }
 
     private fun addHeart() {
@@ -224,7 +218,7 @@ class EndingActivity : AppCompatActivity() {
         }
     }
 
-    private inner class HeartCanvasView(context: android.content.Context) : View(context) {
+    private inner class HeartCanvasView(context: Context) : View(context) {
         override fun onDraw(canvas: Canvas) {
             super.onDraw(canvas)
             hearts.forEach { drawHeart(canvas, it) }
@@ -234,7 +228,12 @@ class EndingActivity : AppCompatActivity() {
     private fun drawHeart(canvas: Canvas, heart: Heart) {
         heartPaint.color = Color.argb(heart.alpha, 255, 122, 170)
         heartPaint.style = Paint.Style.FILL
-        heartPaint.setShadowLayer(18f, 0f, 0f, Color.argb((heart.alpha * 0.4f).toInt(), 255, 120, 180))
+        heartPaint.setShadowLayer(
+            18f,
+            0f,
+            0f,
+            Color.argb((heart.alpha * 0.4f).toInt(), 255, 120, 180)
+        )
 
         canvas.save()
         canvas.translate(heart.x, heart.y)
@@ -272,13 +271,16 @@ class EndingActivity : AppCompatActivity() {
     }
 
     private fun updateMusicButton() {
-        btnPlayPause.setImageResource(
-            if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play
-        )
+        btnPlayPause.setImageResource(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play)
     }
 
     private fun startMainActivity() {
-        startActivity(Intent(this, MainActivity::class.java))
+        val mainIntent = Intent(this, MainActivity::class.java)
+        intent.getStringExtra(MainActivity.EXTRA_PLAN_ID)?.let {
+            mainIntent.putExtra(MainActivity.EXTRA_PLAN_ID, it)
+        }
+        mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+        startActivity(mainIntent)
         finish()
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
@@ -287,7 +289,8 @@ class EndingActivity : AppCompatActivity() {
         val shareText = buildString {
             append("LoveAI\n")
             append(tvMessage.text)
-            append("\n\n当前音乐：")
+            append("\n\n")
+            append("\u5f53\u524d\u97f3\u4e50\uff1a")
             append(MusicManager.getCurrentSongName())
         }
 
@@ -296,7 +299,7 @@ class EndingActivity : AppCompatActivity() {
             putExtra(Intent.EXTRA_TEXT, shareText)
             type = "text/plain"
         }
-        startActivity(Intent.createChooser(shareIntent, "分享这一刻"))
+        startActivity(Intent.createChooser(shareIntent, "\u5206\u4eab\u8fd9\u4e00\u523b"))
     }
 
     override fun onResume() {
