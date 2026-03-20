@@ -242,14 +242,23 @@ abstract class BaseEffectView @JvmOverloads constructor(
 
     private fun resolveTextDecorStyle(textType: ContrastTextType): TextDecorStyle {
         return when (effect?.type) {
-            EffectType.FIREWORK, EffectType.HEART_PULSE, EffectType.RIPPLE -> {
-                if (textType == ContrastTextType.MAIN) TextDecorStyle.BURST else TextDecorStyle.SOFT_GLOW
+            EffectType.FIREWORK -> {
+                if (textType == ContrastTextType.MAIN) TextDecorStyle.CINEMATIC else TextDecorStyle.CAPTION
+            }
+            EffectType.HEART_PULSE -> {
+                if (textType == ContrastTextType.MAIN) TextDecorStyle.PULSE else TextDecorStyle.CAPTION
+            }
+            EffectType.RIPPLE -> {
+                if (textType == ContrastTextType.MAIN) TextDecorStyle.RIPPLE else TextDecorStyle.CAPTION
             }
             EffectType.STARRY_SKY, EffectType.AURORA, EffectType.METEOR_SHOWER -> {
                 if (textType == ContrastTextType.MAIN) TextDecorStyle.STARDUST else TextDecorStyle.GALAXY
             }
             EffectType.PETAL_FALL, EffectType.BUTTERFLY, EffectType.BUBBLE_FLOAT -> {
                 if (textType == ContrastTextType.MAIN) TextDecorStyle.FLOATING else TextDecorStyle.RIBBON
+            }
+            EffectType.SNOW_FALL -> {
+                if (textType == ContrastTextType.MAIN) TextDecorStyle.FROST else TextDecorStyle.CAPTION
             }
             EffectType.TYPEWRITER -> {
                 if (textType == ContrastTextType.MAIN) TextDecorStyle.LETTER else TextDecorStyle.RIBBON
@@ -309,6 +318,18 @@ abstract class BaseEffectView @JvmOverloads constructor(
                 panelPaint.shader = null
             }
 
+            TextDecorStyle.CINEMATIC -> {
+                panelPaint.color = Color.argb(136, 10, 10, 18)
+                canvas.drawRoundRect(left, top, right, bottom, radius + 10f, radius + 10f, panelPaint)
+                borderPaint.color = adjustAlpha(Color.WHITE, 76)
+                canvas.drawRoundRect(left, top, right, bottom, radius + 10f, radius + 10f, borderPaint)
+                borderPaint.strokeWidth = 3f
+                borderPaint.color = adjustAlpha(primaryColor, 126)
+                canvas.drawLine(left + 18f, top - 8f, right - 18f, top - 8f, borderPaint)
+                borderPaint.color = adjustAlpha(secondaryColor, 126)
+                canvas.drawLine(left + 18f, bottom + 8f, right - 18f, bottom + 8f, borderPaint)
+            }
+
             TextDecorStyle.STARDUST, TextDecorStyle.GALAXY -> {
                 panelPaint.shader = LinearGradient(
                     left,
@@ -354,6 +375,50 @@ abstract class BaseEffectView @JvmOverloads constructor(
                 panelPaint.shader = null
             }
 
+            TextDecorStyle.PULSE -> {
+                panelPaint.color = Color.argb(156, 16, 10, 18)
+                canvas.drawRoundRect(left, top, right, bottom, radius + 12f, radius + 12f, panelPaint)
+                glowPaint.color = adjustAlpha(primaryColor, 42)
+                canvas.drawRoundRect(left - 6f, top - 6f, right + 6f, bottom + 6f, radius + 16f, radius + 16f, glowPaint)
+                borderPaint.color = adjustAlpha(Color.WHITE, 70)
+                canvas.drawRoundRect(left, top, right, bottom, radius + 12f, radius + 12f, borderPaint)
+                val midY = (top + bottom) / 2f
+                borderPaint.strokeWidth = 2.4f
+                borderPaint.color = adjustAlpha(secondaryColor, 124)
+                canvas.drawLine(left + 20f, midY, left + 46f, midY, borderPaint)
+                canvas.drawLine(left + 46f, midY, left + 58f, midY - 8f, borderPaint)
+                canvas.drawLine(left + 58f, midY - 8f, left + 72f, midY + 10f, borderPaint)
+                canvas.drawLine(left + 72f, midY + 10f, left + 88f, midY, borderPaint)
+                canvas.drawLine(left + 88f, midY, right - 20f, midY, borderPaint)
+            }
+
+            TextDecorStyle.RIPPLE -> {
+                panelPaint.color = Color.argb(128, 8, 12, 24)
+                canvas.drawRoundRect(left, top, right, bottom, radius + 14f, radius + 14f, panelPaint)
+                borderPaint.color = adjustAlpha(primaryColor, 70)
+                canvas.drawRoundRect(left, top, right, bottom, radius + 14f, radius + 14f, borderPaint)
+                borderPaint.color = adjustAlpha(secondaryColor, 72)
+                borderPaint.strokeWidth = 1.6f
+                canvas.drawOval(left - 18f, top - 10f, right + 18f, bottom + 10f, borderPaint)
+                canvas.drawOval(left - 30f, top - 16f, right + 30f, bottom + 16f, borderPaint)
+            }
+
+            TextDecorStyle.FROST -> {
+                panelPaint.shader = LinearGradient(
+                    left,
+                    top,
+                    right,
+                    bottom,
+                    intArrayOf(Color.argb(170, 220, 232, 255), Color.argb(116, 120, 150, 190)),
+                    floatArrayOf(0f, 1f),
+                    Shader.TileMode.CLAMP
+                )
+                canvas.drawRoundRect(left, top, right, bottom, radius + 6f, radius + 6f, panelPaint)
+                borderPaint.color = Color.argb(110, 245, 250, 255)
+                canvas.drawRoundRect(left, top, right, bottom, radius + 6f, radius + 6f, borderPaint)
+                panelPaint.shader = null
+            }
+
             TextDecorStyle.LETTER -> {
                 panelPaint.color = Color.argb(214, 244, 236, 222)
                 borderPaint.color = adjustAlpha(primaryColor, 72)
@@ -363,6 +428,13 @@ abstract class BaseEffectView @JvmOverloads constructor(
                 borderPaint.strokeWidth = 1f
                 val baseY = bottom - 8f
                 canvas.drawLine(left + 14f, baseY, right - 14f, baseY, borderPaint)
+            }
+
+            TextDecorStyle.CAPTION -> {
+                panelPaint.color = Color.argb(98, 6, 8, 16)
+                canvas.drawRoundRect(left, top, right, bottom, 999f, 999f, panelPaint)
+                borderPaint.color = adjustAlpha(Color.WHITE, 58)
+                canvas.drawRoundRect(left, top, right, bottom, 999f, 999f, borderPaint)
             }
         }
     }
@@ -421,16 +493,22 @@ abstract class BaseEffectView @JvmOverloads constructor(
             val normalized = index - (text.length - 1) / 2f
             val offsetY = when (decorStyle) {
                 TextDecorStyle.BURST -> -abs(normalized) * 0.7f + sin(frame * 0.08f + index * 0.6f) * 1.8f
+                TextDecorStyle.CINEMATIC -> sin(frame * 0.04f + index * 0.35f) * 0.9f
                 TextDecorStyle.STARDUST -> sin(frame * 0.05f + index * 0.45f) * 1.6f
                 TextDecorStyle.GALAXY -> sin(frame * 0.04f + index * 0.35f) * 1.2f - abs(normalized) * 0.25f
                 TextDecorStyle.FLOATING -> sin(frame * 0.06f + index * 0.55f) * 2.1f
                 TextDecorStyle.RIBBON -> sin(frame * 0.05f + index * 0.5f) * 1.3f
+                TextDecorStyle.PULSE -> sin(frame * 0.12f + index * 0.55f) * (if (index % 2 == 0) 2.6f else 1.2f)
+                TextDecorStyle.RIPPLE -> sin(frame * 0.08f + abs(normalized) * 0.7f) * 1.7f
+                TextDecorStyle.FROST -> sin(frame * 0.03f + index * 0.25f) * 0.8f
                 TextDecorStyle.LETTER -> 0f
                 TextDecorStyle.SOFT_GLOW -> 0f
+                TextDecorStyle.CAPTION -> 0f
             }
             val offsetX = when (decorStyle) {
                 TextDecorStyle.BURST -> normalized * 0.6f
                 TextDecorStyle.FLOATING -> sin(frame * 0.03f + index * 0.4f) * 0.8f
+                TextDecorStyle.RIPPLE -> normalized * 0.15f
                 else -> 0f
             }
             val charX = cursorX + offsetX
@@ -456,10 +534,15 @@ abstract class BaseEffectView @JvmOverloads constructor(
     private enum class TextDecorStyle {
         SOFT_GLOW,
         BURST,
+        CINEMATIC,
         STARDUST,
         GALAXY,
         FLOATING,
         RIBBON,
-        LETTER
+        LETTER,
+        PULSE,
+        RIPPLE,
+        FROST,
+        CAPTION
     }
 }

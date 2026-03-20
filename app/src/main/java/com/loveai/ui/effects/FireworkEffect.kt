@@ -20,44 +20,38 @@ class FireworkEffect @JvmOverloads constructor(
 ) : BaseEffectView(context, attrs) {
 
     private enum class ShellType {
-        CROWN,
+        CHRYSANTHEMUM,
         WILLOW,
-        BOUQUET
+        FAN
     }
 
-    private data class Spark(
+    private data class TrailSpark(
         var x: Float,
         var y: Float,
         var vx: Float,
         var vy: Float,
+        var previousX: Float,
+        var previousY: Float,
         val color: Int,
-        val size: Float,
+        val width: Float,
         var alpha: Float,
         var life: Float,
         val maxLife: Float,
         val drag: Float,
         val gravity: Float,
-        val twinkleSpeed: Float
-    )
-
-    private data class Shockwave(
-        var radius: Float,
-        var alpha: Float,
-        val color: Int,
-        val strokeWidth: Float
+        val tailFactor: Float
     )
 
     private data class FireworkShell(
         var x: Float,
         var y: Float,
         val targetY: Float,
-        val color: Int,
+        val mainColor: Int,
         val accentColor: Int,
         val shellType: ShellType,
         var vy: Float,
         var exploded: Boolean = false,
-        val sparks: MutableList<Spark> = mutableListOf(),
-        val shockwaves: MutableList<Shockwave> = mutableListOf()
+        val sparks: MutableList<TrailSpark> = mutableListOf()
     )
 
     private data class SkyStar(
@@ -78,7 +72,7 @@ class FireworkEffect @JvmOverloads constructor(
     private val subTextPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var frameCount = 0
     private var textAlpha = 0f
-    private var textScale = 0.84f
+    private var textScale = 0.86f
     private var textFloat = 0f
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
@@ -91,21 +85,21 @@ class FireworkEffect @JvmOverloads constructor(
             0f,
             h.toFloat(),
             intArrayOf(
-                Color.parseColor("#170914"),
-                Color.parseColor("#0E0C1E"),
-                Color.parseColor("#05060E")
+                Color.parseColor("#160913"),
+                Color.parseColor("#0D0A1A"),
+                Color.parseColor("#05060D")
             ),
-            floatArrayOf(0f, 0.32f, 1f),
+            floatArrayOf(0f, 0.34f, 1f),
             Shader.TileMode.CLAMP
         )
 
         stars.clear()
-        repeat(46) {
+        repeat(42) {
             stars += SkyStar(
                 x = Random.nextFloat() * w,
-                y = Random.nextFloat() * h * 0.44f,
-                size = Random.nextFloat() * 2.4f + 0.6f,
-                alpha = Random.nextInt(40, 135),
+                y = Random.nextFloat() * h * 0.42f,
+                size = Random.nextFloat() * 2.3f + 0.6f,
+                alpha = Random.nextInt(36, 128),
                 twinkle = Random.nextFloat() * Math.PI.toFloat() * 2f,
                 speed = Random.nextFloat() * 0.05f + 0.015f
             )
@@ -116,7 +110,7 @@ class FireworkEffect @JvmOverloads constructor(
         shells.clear()
         frameCount = 0
         textAlpha = 0f
-        textScale = 0.84f
+        textScale = 0.86f
         textFloat = 0f
 
         textPaint.apply {
@@ -137,25 +131,23 @@ class FireworkEffect @JvmOverloads constructor(
     private fun randomPalette(): Pair<Int, Int> {
         return when (Random.nextInt(5)) {
             0 -> primaryColor to Color.WHITE
-            1 -> secondaryColor to Color.parseColor("#FFDFA8")
-            2 -> Color.parseColor("#FFD45D") to Color.parseColor("#FFF7D6")
-            3 -> Color.parseColor("#A8D8FF") to Color.WHITE
+            1 -> secondaryColor to Color.parseColor("#FFF1C7")
+            2 -> Color.parseColor("#FFD560") to Color.parseColor("#FFF9EA")
+            3 -> Color.parseColor("#9FD7FF") to Color.WHITE
             else -> primaryColor to secondaryColor
         }
     }
 
     private fun launchShell() {
-        if (width == 0 || height == 0) return
         val (mainColor, accentColor) = randomPalette()
-        val shellType = ShellType.values()[Random.nextInt(ShellType.values().size)]
         shells += FireworkShell(
             x = width * (0.18f + Random.nextFloat() * 0.64f),
-            y = height + 36f,
-            targetY = height * (0.18f + Random.nextFloat() * 0.24f),
-            color = mainColor,
+            y = height + 30f,
+            targetY = height * (0.17f + Random.nextFloat() * 0.22f),
+            mainColor = mainColor,
             accentColor = accentColor,
-            shellType = shellType,
-            vy = -(13f + Random.nextFloat() * 5f) * animationSpeed
+            shellType = ShellType.values()[Random.nextInt(ShellType.values().size)],
+            vy = -(13f + Random.nextFloat() * 4.6f) * animationSpeed
         )
     }
 
@@ -164,69 +156,84 @@ class FireworkEffect @JvmOverloads constructor(
         angle: Float,
         speed: Float,
         color: Int,
-        size: Float,
+        width: Float,
         life: Float,
         drag: Float,
         gravity: Float,
-        alpha: Float = 1f
+        tailFactor: Float
     ) {
-        shell.sparks += Spark(
+        shell.sparks += TrailSpark(
             x = shell.x,
             y = shell.y,
             vx = cos(angle) * speed * animationSpeed,
             vy = sin(angle) * speed * animationSpeed,
+            previousX = shell.x,
+            previousY = shell.y,
             color = color,
-            size = size,
-            alpha = alpha,
+            width = width,
+            alpha = 1f,
             life = life,
             maxLife = life,
             drag = drag,
             gravity = gravity,
-            twinkleSpeed = Random.nextFloat() * 0.1f + 0.04f
+            tailFactor = tailFactor
         )
     }
 
     private fun explodeShell(shell: FireworkShell) {
-        val baseCount = particleCount.coerceIn(60, 150)
+        val baseCount = particleCount.coerceIn(56, 132)
         when (shell.shellType) {
-            ShellType.CROWN -> {
+            ShellType.CHRYSANTHEMUM -> {
                 repeat(baseCount) { index ->
                     val angle = (Math.PI * 2 * index / baseCount).toFloat()
-                    val speed = Random.nextFloat() * 3.6f + 6.8f
-                    addSpark(shell, angle, speed, shell.color, Random.nextFloat() * 3.4f + 2.2f, Random.nextFloat() * 34f + 42f, 0.986f, 0.085f)
-                }
-                repeat(baseCount / 3) {
-                    val angle = Random.nextFloat() * (Math.PI * 2).toFloat()
-                    addSpark(shell, angle, Random.nextFloat() * 2.6f + 3.2f, shell.accentColor, Random.nextFloat() * 2.4f + 1.2f, Random.nextFloat() * 24f + 26f, 0.982f, 0.08f)
+                    addSpark(
+                        shell = shell,
+                        angle = angle,
+                        speed = Random.nextFloat() * 3.4f + 6.2f,
+                        color = if (index % 5 == 0) shell.accentColor else shell.mainColor,
+                        width = Random.nextFloat() * 2f + 1.8f,
+                        life = Random.nextFloat() * 30f + 30f,
+                        drag = 0.986f,
+                        gravity = 0.08f,
+                        tailFactor = Random.nextFloat() * 16f + 18f
+                    )
                 }
             }
 
             ShellType.WILLOW -> {
-                repeat(baseCount + 20) {
+                repeat(baseCount + 16) {
                     val angle = Random.nextFloat() * (Math.PI * 2).toFloat()
-                    addSpark(shell, angle, Random.nextFloat() * 2.8f + 4.2f, shell.color, Random.nextFloat() * 4f + 2f, Random.nextFloat() * 48f + 58f, 0.992f, 0.16f)
-                }
-                repeat(baseCount / 4) {
-                    val angle = Random.nextFloat() * (Math.PI * 2).toFloat()
-                    addSpark(shell, angle, Random.nextFloat() * 1.8f + 2.1f, shell.accentColor, Random.nextFloat() * 2f + 1f, Random.nextFloat() * 30f + 28f, 0.988f, 0.12f, 0.85f)
+                    addSpark(
+                        shell = shell,
+                        angle = angle,
+                        speed = Random.nextFloat() * 2.6f + 4.4f,
+                        color = if (Random.nextBoolean()) shell.mainColor else shell.accentColor,
+                        width = Random.nextFloat() * 2.2f + 1.5f,
+                        life = Random.nextFloat() * 42f + 44f,
+                        drag = 0.992f,
+                        gravity = 0.16f,
+                        tailFactor = Random.nextFloat() * 22f + 26f
+                    )
                 }
             }
 
-            ShellType.BOUQUET -> {
-                val bursts = 5
-                repeat(bursts) { cluster ->
-                    val clusterAngle = (Math.PI * 2 * cluster / bursts + Random.nextFloat() * 0.25f).toFloat()
-                    val clusterSpeed = Random.nextFloat() * 2.2f + 3.6f
-                    repeat(baseCount / bursts) {
-                        val angle = clusterAngle + (Random.nextFloat() - 0.5f) * 0.7f
-                        addSpark(shell, angle, clusterSpeed + Random.nextFloat() * 2.4f, if (Random.nextBoolean()) shell.color else shell.accentColor, Random.nextFloat() * 3.1f + 1.8f, Random.nextFloat() * 32f + 34f, 0.984f, 0.1f)
-                    }
+            ShellType.FAN -> {
+                repeat(baseCount) {
+                    val angle = Math.toRadians((210 + Random.nextInt(-42, 42)).toDouble()).toFloat()
+                    addSpark(
+                        shell = shell,
+                        angle = angle,
+                        speed = Random.nextFloat() * 3.2f + 4.8f,
+                        color = if (Random.nextInt(4) == 0) shell.accentColor else shell.mainColor,
+                        width = Random.nextFloat() * 1.8f + 1.6f,
+                        life = Random.nextFloat() * 28f + 26f,
+                        drag = 0.987f,
+                        gravity = 0.1f,
+                        tailFactor = Random.nextFloat() * 14f + 16f
+                    )
                 }
             }
         }
-
-        shell.shockwaves += Shockwave(0f, 1f, shell.accentColor, 3.6f)
-        shell.shockwaves += Shockwave(18f, 0.72f, Color.WHITE, 2.1f)
         shell.exploded = true
     }
 
@@ -234,76 +241,98 @@ class FireworkEffect @JvmOverloads constructor(
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), backgroundPaint)
 
         glowPaint.maskFilter = BlurMaskFilter(width * 0.12f, BlurMaskFilter.Blur.NORMAL)
-        glowPaint.color = adjustAlpha(primaryColor, 22)
-        canvas.drawCircle(width * 0.2f, height * 0.18f, width * 0.16f, glowPaint)
-        glowPaint.color = adjustAlpha(secondaryColor, 18)
-        canvas.drawCircle(width * 0.8f, height * 0.22f, width * 0.14f, glowPaint)
+        glowPaint.color = adjustAlpha(primaryColor, 20)
+        canvas.drawCircle(width * 0.22f, height * 0.18f, width * 0.16f, glowPaint)
+        glowPaint.color = adjustAlpha(secondaryColor, 16)
+        canvas.drawCircle(width * 0.8f, height * 0.2f, width * 0.14f, glowPaint)
         glowPaint.maskFilter = null
 
         stars.forEach { star ->
             val shimmer = sin(star.twinkle) * 0.35f + 0.65f
-            paint.color = Color.argb((star.alpha * shimmer).toInt().coerceIn(0, 255), 255, 255, 255)
             paint.style = Paint.Style.FILL
-            canvas.drawCircle(star.x, star.y, star.size * (0.8f + shimmer * 0.35f), paint)
+            paint.color = Color.argb((star.alpha * shimmer).toInt().coerceIn(0, 255), 255, 255, 255)
+            canvas.drawCircle(star.x, star.y, star.size * (0.82f + shimmer * 0.32f), paint)
         }
     }
 
-    private fun drawShell(canvas: Canvas, shell: FireworkShell) {
-        if (!shell.exploded) {
-            glowPaint.maskFilter = BlurMaskFilter(18f, BlurMaskFilter.Blur.NORMAL)
-            glowPaint.color = adjustAlpha(shell.color, 140)
-            canvas.drawCircle(shell.x, shell.y, 6.8f, glowPaint)
+    private fun drawRisingShell(canvas: Canvas, shell: FireworkShell) {
+        glowPaint.maskFilter = BlurMaskFilter(16f, BlurMaskFilter.Blur.NORMAL)
+        glowPaint.color = adjustAlpha(shell.mainColor, 150)
+        canvas.drawCircle(shell.x, shell.y, 5.8f, glowPaint)
 
-            paint.shader = LinearGradient(
-                shell.x,
-                shell.y,
-                shell.x,
-                shell.y + 92f,
-                intArrayOf(
-                    adjustAlpha(shell.accentColor, 170),
-                    adjustAlpha(shell.color, 84),
-                    Color.argb(0, Color.red(shell.color), Color.green(shell.color), Color.blue(shell.color))
-                ),
-                floatArrayOf(0f, 0.3f, 1f),
-                Shader.TileMode.CLAMP
-            )
-            paint.style = Paint.Style.STROKE
-            paint.strokeWidth = 3.2f
-            canvas.drawLine(shell.x, shell.y, shell.x, shell.y + 92f, paint)
-            paint.shader = null
+        paint.shader = LinearGradient(
+            shell.x,
+            shell.y,
+            shell.x,
+            shell.y + 86f,
+            intArrayOf(
+                adjustAlpha(shell.accentColor, 176),
+                adjustAlpha(shell.mainColor, 100),
+                Color.argb(0, Color.red(shell.mainColor), Color.green(shell.mainColor), Color.blue(shell.mainColor))
+            ),
+            floatArrayOf(0f, 0.24f, 1f),
+            Shader.TileMode.CLAMP
+        )
+        paint.style = Paint.Style.STROKE
+        paint.strokeCap = Paint.Cap.ROUND
+        paint.strokeWidth = 3.4f
+        canvas.drawLine(shell.x, shell.y, shell.x, shell.y + 86f, paint)
+        paint.shader = null
 
-            paint.style = Paint.Style.FILL
-            paint.color = shell.accentColor
-            canvas.drawCircle(shell.x, shell.y, 3.8f, paint)
-            return
-        }
+        paint.style = Paint.Style.FILL
+        paint.color = shell.accentColor
+        canvas.drawCircle(shell.x, shell.y, 3.2f, paint)
+    }
 
-        shell.shockwaves.forEach { wave ->
-            paint.style = Paint.Style.STROKE
-            paint.strokeWidth = wave.strokeWidth
-            paint.color = adjustAlpha(wave.color, (wave.alpha * 255).toInt().coerceIn(0, 255))
-            canvas.drawCircle(shell.x, shell.y, wave.radius, paint)
-        }
+    private fun drawSpark(canvas: Canvas, spark: TrailSpark) {
+        val intensity = (spark.life / spark.maxLife).coerceIn(0f, 1f)
+        val alpha = (spark.alpha * 255).toInt().coerceIn(0, 255)
+        val tailX = spark.x - (spark.x - spark.previousX) * spark.tailFactor
+        val tailY = spark.y - (spark.y - spark.previousY) * spark.tailFactor
 
-        shell.sparks.forEachIndexed { index, spark ->
-            if (spark.life <= 0f) return@forEachIndexed
-            val flicker = sin(frameCount * spark.twinkleSpeed + index * 0.35f) * 0.22f + 0.78f
-            val alpha = (spark.alpha * 255 * flicker).toInt().coerceIn(0, 255)
+        paint.shader = LinearGradient(
+            spark.x,
+            spark.y,
+            tailX,
+            tailY,
+            intArrayOf(
+                Color.argb(alpha, 255, 255, 255),
+                Color.argb((alpha * 0.9f).toInt(), Color.red(spark.color), Color.green(spark.color), Color.blue(spark.color)),
+                Color.argb(0, Color.red(spark.color), Color.green(spark.color), Color.blue(spark.color))
+            ),
+            floatArrayOf(0f, 0.32f, 1f),
+            Shader.TileMode.CLAMP
+        )
+        paint.style = Paint.Style.STROKE
+        paint.strokeCap = Paint.Cap.ROUND
+        paint.strokeWidth = spark.width * (0.75f + intensity * 0.45f)
+        canvas.drawLine(spark.x, spark.y, tailX, tailY, paint)
+        paint.shader = null
 
-            glowPaint.maskFilter = BlurMaskFilter(spark.size * 4f, BlurMaskFilter.Blur.NORMAL)
-            glowPaint.color = adjustAlpha(spark.color, (alpha * 0.38f).toInt())
-            canvas.drawCircle(spark.x, spark.y, spark.size * 1.9f, glowPaint)
+        glowPaint.maskFilter = BlurMaskFilter(spark.width * 3.8f, BlurMaskFilter.Blur.NORMAL)
+        glowPaint.color = adjustAlpha(spark.color, (alpha * 0.34f).toInt())
+        canvas.drawCircle(spark.x, spark.y, spark.width * 1.5f, glowPaint)
 
-            paint.style = Paint.Style.FILL
-            paint.color = adjustAlpha(spark.color, alpha)
-            canvas.drawCircle(spark.x, spark.y, spark.size * (0.58f + spark.life / spark.maxLife * 0.54f), paint)
-        }
-        glowPaint.maskFilter = null
+        paint.style = Paint.Style.FILL
+        paint.color = Color.argb(alpha, 255, 255, 255)
+        canvas.drawCircle(spark.x, spark.y, spark.width * 0.42f, paint)
     }
 
     override fun onDrawEffect(canvas: Canvas) {
         drawSky(canvas)
-        shells.forEach { drawShell(canvas, it) }
+
+        shells.forEach { shell ->
+            if (!shell.exploded) {
+                drawRisingShell(canvas, shell)
+            } else {
+                shell.sparks.forEach { spark ->
+                    if (spark.life > 0f) {
+                        drawSpark(canvas, spark)
+                    }
+                }
+            }
+        }
+        glowPaint.maskFilter = null
 
         if (message.isNotEmpty()) {
             val centerX = width / 2f
@@ -329,7 +358,7 @@ class FireworkEffect @JvmOverloads constructor(
         val progress = (frameCount / 56f).coerceIn(0f, 1f)
         val eased = 1f - (1f - progress) * (1f - progress)
         textAlpha = eased
-        textScale = 0.84f + eased * 0.16f
+        textScale = 0.86f + eased * 0.14f
         textFloat += 0.03f
 
         stars.forEach { it.twinkle += it.speed }
@@ -348,16 +377,12 @@ class FireworkEffect @JvmOverloads constructor(
                     explodeShell(shell)
                 }
             } else {
-                shell.shockwaves.forEach { wave ->
-                    wave.radius += 4.8f * animationSpeed
-                    wave.alpha -= 0.032f
-                }
-                shell.shockwaves.removeAll { it.alpha <= 0f }
-
                 var allDead = true
                 shell.sparks.forEach { spark ->
                     if (spark.life <= 0f) return@forEach
                     allDead = false
+                    spark.previousX = spark.x
+                    spark.previousY = spark.y
                     spark.x += spark.vx
                     spark.y += spark.vy
                     spark.vx *= spark.drag
@@ -365,7 +390,7 @@ class FireworkEffect @JvmOverloads constructor(
                     spark.life -= 1f
                     spark.alpha = (spark.life / spark.maxLife).coerceIn(0f, 1f)
                 }
-                if (allDead && shell.shockwaves.isEmpty()) {
+                if (allDead) {
                     removeList += shell
                 }
             }
