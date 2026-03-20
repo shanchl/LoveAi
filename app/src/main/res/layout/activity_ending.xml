@@ -7,93 +7,107 @@
     android:background="@drawable/bg_splash_gradient"
     tools:context=".ui.EndingActivity">
 
-    <!-- 装饰性爱心动画容器 -->
     <FrameLayout
         android:id="@+id/heartContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- 主内容区域 -->
+    <View
+        android:id="@+id/vHalo"
+        android:layout_width="280dp"
+        android:layout_height="280dp"
+        android:layout_gravity="center"
+        android:alpha="0.24"
+        android:background="@drawable/bg_circle_button" />
+
     <LinearLayout
+        android:id="@+id/contentPanel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:background="@drawable/bg_replay_panel"
         android:gravity="center"
         android:orientation="vertical"
-        android:padding="32dp">
+        android:padding="28dp">
 
-        <!-- 标题 -->
         <TextView
             android:id="@+id/tvTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="forever love"
+            android:fontFamily="serif"
+            android:letterSpacing="0.16"
+            android:text="FOREVER LOVE"
+            android:textAllCaps="true"
             android:textColor="@color/text_white"
-            android:textSize="36sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.1"
-            android:fontFamily="serif" />
+            android:textSize="28sp"
+            android:textStyle="bold" />
 
-        <!-- 分隔线 -->
+        <TextView
+            android:id="@+id/tvSubtitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:fontFamily="sans-serif-light"
+            android:gravity="center"
+            android:letterSpacing="0.08"
+            android:text="A soft ending for a long heartbeat"
+            android:textColor="#E8C7D9"
+            android:textSize="14sp" />
+
         <View
-            android:layout_width="100dp"
+            android:layout_width="110dp"
             android:layout_height="2dp"
-            android:layout_marginTop="24dp"
-            android:layout_marginBottom="24dp"
+            android:layout_marginTop="22dp"
+            android:layout_marginBottom="22dp"
             android:background="@color/pink_light" />
 
-        <!-- 感谢语 -->
         <TextView
             android:id="@+id/tvMessage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:fontFamily="serif"
             android:gravity="center"
-            android:text="感谢这段美好的时光\n愿我们的爱永远绽放"
-            android:textColor="@color/text_white"
-            android:textSize="20sp"
             android:lineSpacingExtra="8dp"
-            android:fontFamily="serif" />
+            android:textColor="@color/text_white"
+            android:textSize="20sp" />
 
-        <!-- 按钮区域 -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="48dp"
+            android:layout_marginTop="36dp"
+            android:gravity="center"
             android:orientation="horizontal">
 
-            <!-- 重播按钮 -->
             <Button
                 android:id="@+id/btnReplay"
                 android:layout_width="wrap_content"
                 android:layout_height="48dp"
-                android:paddingStart="32dp"
-                android:paddingEnd="32dp"
                 android:background="@drawable/bg_circle_button"
-                android:text="重新开始"
+                android:paddingStart="28dp"
+                android:paddingEnd="28dp"
+                android:text="Replay"
                 android:textColor="@color/white"
                 android:textSize="16sp" />
 
             <Space
-                android:layout_width="24dp"
+                android:layout_width="18dp"
                 android:layout_height="wrap_content" />
 
-            <!-- 分享按钮 -->
             <Button
                 android:id="@+id/btnShare"
                 android:layout_width="wrap_content"
                 android:layout_height="48dp"
-                android:paddingStart="32dp"
-                android:paddingEnd="32dp"
                 android:background="@drawable/bg_circle_button"
-                android:text="分享"
+                android:paddingStart="28dp"
+                android:paddingEnd="28dp"
+                android:text="Share"
                 android:textColor="@color/white"
                 android:textSize="16sp" />
-
         </LinearLayout>
-
     </LinearLayout>
 
-    <!-- 底部音乐控制栏 -->
     <LinearLayout
         android:id="@+id/musicControlBar"
         android:layout_width="match_parent"
@@ -110,23 +124,22 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="播放/暂停"
+            android:contentDescription="Play or pause"
             android:src="@drawable/ic_pause" />
 
         <TextView
             android:id="@+id/tvMusicName"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:layout_marginStart="12dp"
             android:layout_marginEnd="12dp"
+            android:layout_weight="1"
             android:ellipsize="marquee"
             android:marqueeRepeatLimit="marquee_forever"
             android:singleLine="true"
             android:text="Love Music"
             android:textColor="@color/text_white"
             android:textSize="14sp" />
-
     </LinearLayout>
 
 </FrameLayout>

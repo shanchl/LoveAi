@@ -54,6 +54,11 @@ class FireworkEffect @JvmOverloads constructor(
     }
 
     override fun onEffectBound(effect: Effect) {
+        fireworks.clear()
+        frameCount = 0
+        textAlpha = 0f
+        textScale = 0.6f
+        glowPhase = 0f
         textPaint.apply {
             color = Color.WHITE
             textSize = 48f

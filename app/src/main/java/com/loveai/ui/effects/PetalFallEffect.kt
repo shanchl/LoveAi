@@ -62,6 +62,9 @@ class PetalFallEffect @JvmOverloads constructor(
     }
 
     override fun onEffectBound(effect: Effect) {
+        frameCount = 0
+        displayCharCount = 0
+        subTextAlpha = 0f
         textPaint.apply {
             color = Color.WHITE
             textSize = 44f

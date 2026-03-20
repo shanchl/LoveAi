@@ -19,12 +19,15 @@ import com.loveai.manager.MusicManager
 
 class SplashActivity : AppCompatActivity() {
 
+    private lateinit var tvTitle: TextView
+    private lateinit var tvSubtitle: TextView
     private lateinit var tvCountdown: TextView
     private lateinit var tvLoading: TextView
     private lateinit var ivHeart1: ImageView
     private lateinit var ivHeart2: ImageView
     private lateinit var ivHeart3: ImageView
     private lateinit var ivHeart4: ImageView
+    private lateinit var glowView: View
 
     private var countdown = 3
     private val handler = Handler(Looper.getMainLooper())
@@ -33,119 +36,159 @@ class SplashActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_splash)
 
-        // 初始化背景音乐
         MusicManager.init(this)
 
         initViews()
         startAnimations()
+        updateCountdown(countdown)
         startCountdown()
     }
 
     private fun initViews() {
+        tvTitle = findViewById(R.id.tvTitle)
+        tvSubtitle = findViewById(R.id.tvSubtitle)
         tvCountdown = findViewById(R.id.tvCountdown)
         tvLoading = findViewById(R.id.tvLoading)
         ivHeart1 = findViewById(R.id.ivHeart1)
         ivHeart2 = findViewById(R.id.ivHeart2)
         ivHeart3 = findViewById(R.id.ivHeart3)
         ivHeart4 = findViewById(R.id.ivHeart4)
+        glowView = findViewById(R.id.vGlow)
     }
 
     private fun startAnimations() {
-        // 爱心浮动动画
-        startFloatingAnimation(ivHeart1, 2000)
-        startFloatingAnimation(ivHeart2, 2500)
-        startFloatingAnimation(ivHeart3, 2200)
-        startFloatingAnimation(ivHeart4, 2800)
+        animateHeadline(tvTitle, 0L, 0f)
+        animateHeadline(tvSubtitle, 180L, 20f)
 
-        // Loading文字闪烁
-        val loadingAnimator = ObjectAnimator.ofFloat(tvLoading, "alpha", 0.5f, 1f)
-        loadingAnimator.duration = 1000
-        loadingAnimator.repeatMode = ValueAnimator.REVERSE
-        loadingAnimator.repeatCount = ValueAnimator.INFINITE
-        loadingAnimator.start()
+        startFloatingAnimation(ivHeart1, 2100L, 1f)
+        startFloatingAnimation(ivHeart2, 2500L, -1f)
+        startFloatingAnimation(ivHeart3, 2300L, 1f)
+        startFloatingAnimation(ivHeart4, 2800L, -1f)
+
+        val loadingAnimator = ObjectAnimator.ofFloat(tvLoading, "alpha", 0.45f, 1f).apply {
+            duration = 1100L
+            repeatMode = ValueAnimator.REVERSE
+            repeatCount = ValueAnimator.INFINITE
+        }
+
+        val glowBreath = ObjectAnimator.ofFloat(glowView, "scaleX", 0.92f, 1.08f).apply {
+            duration = 2200L
+            repeatMode = ValueAnimator.REVERSE
+            repeatCount = ValueAnimator.INFINITE
+        }
+        val glowBreathY = ObjectAnimator.ofFloat(glowView, "scaleY", 0.92f, 1.08f).apply {
+            duration = 2200L
+            repeatMode = ValueAnimator.REVERSE
+            repeatCount = ValueAnimator.INFINITE
+        }
+        AnimatorSet().apply {
+            playTogether(glowBreath, glowBreathY, loadingAnimator)
+            start()
+        }
     }
 
-    private fun startFloatingAnimation(view: View, duration: Long) {
-        val floatUp = ObjectAnimator.ofFloat(view, "translationY", 0f, -20f)
-        floatUp.duration = duration / 2
-        floatUp.interpolator = AccelerateDecelerateInterpolator()
+    private fun animateHeadline(view: View, startDelay: Long, translationY: Float) {
+        view.alpha = 0f
+        view.translationY = translationY
+        view.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setStartDelay(startDelay)
+            .setDuration(700L)
+            .setInterpolator(AccelerateDecelerateInterpolator())
+            .start()
+    }
 
-        val floatDown = ObjectAnimator.ofFloat(view, "translationY", -20f, 0f)
-        floatDown.duration = duration / 2
-        floatDown.interpolator = AccelerateDecelerateInterpolator()
+    private fun startFloatingAnimation(view: View, duration: Long, rotationDirection: Float) {
+        val floatY = ObjectAnimator.ofFloat(view, "translationY", 0f, -24f, 0f).apply {
+            this.duration = duration
+            interpolator = AccelerateDecelerateInterpolator()
+            repeatCount = ValueAnimator.INFINITE
+        }
+        val floatX = ObjectAnimator.ofFloat(view, "translationX", 0f, 8f * rotationDirection, 0f).apply {
+            this.duration = duration + 400L
+            interpolator = AccelerateDecelerateInterpolator()
+            repeatCount = ValueAnimator.INFINITE
+        }
+        val rotate = ObjectAnimator.ofFloat(view, "rotation", -8f * rotationDirection, 8f * rotationDirection).apply {
+            this.duration = duration + 200L
+            interpolator = AccelerateDecelerateInterpolator()
+            repeatMode = ValueAnimator.REVERSE
+            repeatCount = ValueAnimator.INFINITE
+        }
+        val pulseX = ObjectAnimator.ofFloat(view, "scaleX", 0.88f, 1.18f, 0.92f).apply {
+            this.duration = duration
+            repeatCount = ValueAnimator.INFINITE
+        }
+        val pulseY = ObjectAnimator.ofFloat(view, "scaleY", 0.88f, 1.18f, 0.92f).apply {
+            this.duration = duration
+            repeatCount = ValueAnimator.INFINITE
+        }
 
-        val animatorSet = AnimatorSet()
-        animatorSet.playSequentially(floatUp, floatDown)
-        animatorSet.start()
-
-        // 循环播放
-        handler.postDelayed({ startFloatingAnimation(view, duration) }, duration)
+        AnimatorSet().apply {
+            playTogether(floatY, floatX, rotate, pulseX, pulseY)
+            start()
+        }
     }
 
     private fun startCountdown() {
         handler.postDelayed(object : Runnable {
             override fun run() {
+                countdown--
                 if (countdown > 0) {
                     updateCountdown(countdown)
-                    countdown--
-                    handler.postDelayed(this, 1000)
+                    handler.postDelayed(this, 1000L)
                 } else {
-                    // 倒计时结束，跳转主界面
                     startMainActivity()
                 }
             }
-        }, 500)
+        }, 1000L)
     }
 
     private fun updateCountdown(num: Int) {
         tvCountdown.text = num.toString()
-        
-        // 数字跳动特效动画 - 包含弹跳、缩放、光晕
         tvCountdown.pivotX = tvCountdown.width / 2f
         tvCountdown.pivotY = tvCountdown.height / 2f
-        
-        // 1. 弹跳进入动画 (0-300ms)
-        val scaleXAnim = ObjectAnimator.ofFloat(tvCountdown, "scaleX", 0.3f, 1.2f, 0.9f, 1.1f, 1f)
-        val scaleYAnim = ObjectAnimator.ofFloat(tvCountdown, "scaleY", 0.3f, 1.2f, 0.9f, 1.1f, 1f)
-        
-        // 2. 透明度动画
-        val alphaAnim = ObjectAnimator.ofFloat(tvCountdown, "alpha", 0f, 1f)
-        
-        // 3. 旋转动画（增加动感）
-        val rotationAnim = ObjectAnimator.ofFloat(tvCountdown, "rotation", -15f, 10f, -5f, 0f)
-        
-        // 4. 阴影发光效果
         tvCountdown.setShadowLayer(20f, 0f, 0f, ContextCompat.getColor(this, R.color.pink_light))
-        
-        // 组合动画
-        val animatorSet = AnimatorSet()
-        animatorSet.playTogether(scaleXAnim, scaleYAnim, alphaAnim, rotationAnim)
-        animatorSet.duration = 400
-        animatorSet.interpolator = OvershootInterpolator(1.5f)
-        animatorSet.start()
-        
-        // 显示后保持微小脉动效果
-        val pulseAnim = ObjectAnimator.ofFloat(tvCountdown, "scaleX", 1f, 1.08f, 1f)
-        val pulseAnimY = ObjectAnimator.ofFloat(tvCountdown, "scaleY", 1f, 1.08f, 1f)
-        val pulseSet = AnimatorSet()
-        pulseSet.playTogether(pulseAnim, pulseAnimY)
-        pulseSet.duration = 500
-        pulseSet.startDelay = 400
-        pulseSet.start()
+
+        val scaleXAnim = ObjectAnimator.ofFloat(tvCountdown, "scaleX", 0.3f, 1.22f, 0.92f, 1.08f, 1f)
+        val scaleYAnim = ObjectAnimator.ofFloat(tvCountdown, "scaleY", 0.3f, 1.22f, 0.92f, 1.08f, 1f)
+        val alphaAnim = ObjectAnimator.ofFloat(tvCountdown, "alpha", 0f, 1f)
+        val rotationAnim = ObjectAnimator.ofFloat(tvCountdown, "rotation", -12f, 7f, -3f, 0f)
+
+        AnimatorSet().apply {
+            playTogether(scaleXAnim, scaleYAnim, alphaAnim, rotationAnim)
+            duration = 420L
+            interpolator = OvershootInterpolator(1.45f)
+            start()
+        }
+
+        val pulseX = ObjectAnimator.ofFloat(tvCountdown, "scaleX", 1f, 1.05f, 1f).apply {
+            duration = 560L
+            startDelay = 420L
+        }
+        val pulseY = ObjectAnimator.ofFloat(tvCountdown, "scaleY", 1f, 1.05f, 1f).apply {
+            duration = 560L
+            startDelay = 420L
+        }
+        AnimatorSet().apply {
+            playTogether(pulseX, pulseY)
+            start()
+        }
     }
 
     private fun startMainActivity() {
-        // 淡出动画
-        val fadeOut = ObjectAnimator.ofFloat(findViewById(android.R.id.content), "alpha", 1f, 0f)
-        fadeOut.duration = 400
-        fadeOut.start()
+        val root = findViewById<View>(R.id.splashRoot)
+        val fadeOut = ObjectAnimator.ofFloat(root, "alpha", 1f, 0f).apply {
+            duration = 520L
+            start()
+        }
 
         handler.postDelayed({
-            val intent = Intent(this, MainActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, MainActivity::class.java))
             overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
             finish()
-        }, 400)
+        }, fadeOut.duration)
     }
 
     override fun onDestroy() {

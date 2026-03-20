@@ -133,6 +133,9 @@ class AuroraEffect @JvmOverloads constructor(
     }
 
     override fun onEffectBound(effect: Effect) {
+        frameCount = 0
+        textReveal = 0f
+        textAlpha = 0f
         textPaint.apply {
             color = Color.WHITE
             textSize = 44f

@@ -80,6 +80,10 @@ class StarrySkyEffect @JvmOverloads constructor(
     }
 
     override fun onEffectBound(effect: Effect) {
+        meteors.clear()
+        frameCount = 0
+        textSlideX = 0f
+        textAlpha = 0f
         textPaint.apply {
             color = Color.WHITE
             textSize = 50f

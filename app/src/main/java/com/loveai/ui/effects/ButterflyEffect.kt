@@ -95,6 +95,9 @@ class ButterflyEffect @JvmOverloads constructor(
     }
 
     override fun onEffectBound(effect: Effect) {
+        frameCount = 0
+        textScale = 0.3f
+        textAlpha = 0f
         textPaint.apply {
             color = Color.WHITE
             textSize = 46f

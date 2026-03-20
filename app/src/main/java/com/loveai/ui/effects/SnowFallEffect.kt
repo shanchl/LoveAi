@@ -61,6 +61,9 @@ class SnowFallEffect @JvmOverloads constructor(
     }
 
     override fun onEffectBound(effect: Effect) {
+        frameCount = 0
+        textAlpha = 0f
+        textTwinkle = 0f
         textPaint.apply {
             color = Color.WHITE
             textSize = 44f

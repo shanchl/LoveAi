@@ -61,6 +61,10 @@ class BubbleFloatEffect @JvmOverloads constructor(
     }
 
     override fun onEffectBound(effect: Effect) {
+        frameCount = 0
+        textAlpha = 0f
+        textBounceScale = 0.65f
+        textBouncePhase = 0f
         textPaint.apply {
             color = Color.WHITE
             textSize = 46f

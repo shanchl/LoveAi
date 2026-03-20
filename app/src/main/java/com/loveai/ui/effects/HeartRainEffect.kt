@@ -41,6 +41,9 @@ class HeartRainEffect @JvmOverloads constructor(
     private var textOffsetY = 30f    // 文字上浮偏移量
 
     override fun onEffectBound(effect: Effect) {
+        frameCount = 0
+        textAlpha = 0f
+        textOffsetY = 30f
         textPaint.apply {
             color = Color.WHITE
             textSize = 42f

@@ -97,6 +97,10 @@ class MeteorShowerEffect @JvmOverloads constructor(
     }
 
     override fun onEffectBound(effect: Effect) {
+        frameCount = 0
+        textAlpha = 0f
+        textOffset = 60f
+        meteors.clear()
         textPaint.apply {
             color = Color.WHITE
             textSize = 44f

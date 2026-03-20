@@ -31,6 +31,10 @@ import com.loveai.ui.EndingActivity
 
 class MainActivity : AppCompatActivity() {
 
+    companion object {
+        private const val ENDING_PAGE_MIN_STAY_MS = 10_000L
+    }
+
     private lateinit var viewModel: LoveViewModel
     private lateinit var viewPager: ViewPager2
     private lateinit var indicatorContainer: LinearLayout
@@ -327,7 +331,7 @@ class MainActivity : AppCompatActivity() {
             // 延迟2秒后跳转到结尾页面，让用户看完最后一个特效
             handler.postDelayed({
                 startEndingActivity()
-            }, 2000)
+            }, ENDING_PAGE_MIN_STAY_MS)
         }
     }
 

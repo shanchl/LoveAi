@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -19,28 +20,31 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.loveai.R
 import com.loveai.manager.MusicManager
+import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * 结尾页面
- * 展示浪漫的结束画面，提供重播和分享功能
+ * 结尾页，负责做收尾展示、提供 Replay/Share 入口并延续音乐。
  */
 class EndingActivity : AppCompatActivity() {
 
     private lateinit var heartContainer: FrameLayout
     private lateinit var tvTitle: TextView
+    private lateinit var tvSubtitle: TextView
     private lateinit var tvMessage: TextView
     private lateinit var btnReplay: Button
     private lateinit var btnShare: Button
     private lateinit var btnPlayPause: ImageButton
     private lateinit var tvMusicName: TextView
     private lateinit var musicControlBar: LinearLayout
+    private lateinit var contentPanel: View
+    private lateinit var haloView: View
 
     private val handler = Handler(Looper.getMainLooper())
     private var isPlaying = true
     private var heartRunnable: Runnable? = null
+    private lateinit var heartCanvasView: HeartCanvasView
 
-    // 爱心相关
     private val hearts = mutableListOf<Heart>()
     private val heartPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
@@ -51,7 +55,9 @@ class EndingActivity : AppCompatActivity() {
         var speed: Float,
         var alpha: Int,
         var rotation: Float,
-        var rotationSpeed: Float
+        var rotationSpeed: Float,
+        var driftPhase: Float,
+        var driftSpeed: Float
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,6 +65,7 @@ class EndingActivity : AppCompatActivity() {
         setContentView(R.layout.activity_ending)
 
         initViews()
+        initHeartView()
         initAnimations()
         startHeartAnimation()
         initMusic()
@@ -67,91 +74,111 @@ class EndingActivity : AppCompatActivity() {
     private fun initViews() {
         heartContainer = findViewById(R.id.heartContainer)
         tvTitle = findViewById(R.id.tvTitle)
+        tvSubtitle = findViewById(R.id.tvSubtitle)
         tvMessage = findViewById(R.id.tvMessage)
         btnReplay = findViewById(R.id.btnReplay)
         btnShare = findViewById(R.id.btnShare)
         btnPlayPause = findViewById(R.id.btnPlayPause)
         tvMusicName = findViewById(R.id.tvMusicName)
         musicControlBar = findViewById(R.id.musicControlBar)
+        contentPanel = findViewById(R.id.contentPanel)
+        haloView = findViewById(R.id.vHalo)
 
-        // 随机选择一条感谢语
         val messages = listOf(
-            "感谢这段美好的时光\n愿我们的爱永远绽放",
-            "和你在一起的每一天\n都是最珍贵的回忆",
-            "love is in the air\n永远爱你",
-            "星河万顷你是唯一的风景\n我爱",
-            "愿执子之手 与子偕老\n永远在一起"
+            "Thank you for staying through every frame.\nSome feelings deserve a slower ending.",
+            "This story does not rush the last heartbeat.\nIt lingers where love still glows.",
+            "The lights can fade softly now.\nWhat stays is the warmth between us.",
+            "Every page was only a way of saying it again:\nI still choose you."
         )
         tvMessage.text = messages.random()
 
-        btnReplay.setOnClickListener {
-            startMainActivity()
-        }
+        btnReplay.setOnClickListener { startMainActivity() }
+        btnShare.setOnClickListener { shareMoment() }
+        btnPlayPause.setOnClickListener { toggleMusic() }
+    }
 
-        btnShare.setOnClickListener {
-            shareMoment()
-        }
-
-        btnPlayPause.setOnClickListener {
-            toggleMusic()
-        }
+    private fun initHeartView() {
+        heartCanvasView = HeartCanvasView(this)
+        heartContainer.addView(
+            heartCanvasView,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
     }
 
     private fun initAnimations() {
-        // 标题淡入 + 上浮
-        tvTitle.alpha = 0f
-        tvTitle.translationY = 50f
-        tvTitle.animate()
+        contentPanel.alpha = 0f
+        contentPanel.translationY = 36f
+        haloView.alpha = 0.18f
+
+        contentPanel.animate()
             .alpha(1f)
             .translationY(0f)
-            .setDuration(1000)
+            .setDuration(900L)
             .setInterpolator(AccelerateDecelerateInterpolator())
             .start()
 
-        // 消息延迟显示
+        tvTitle.alpha = 0f
+        tvTitle.translationY = 28f
+        tvTitle.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(900L)
+            .setInterpolator(AccelerateDecelerateInterpolator())
+            .start()
+
         handler.postDelayed({
+            tvSubtitle.alpha = 0f
+            tvSubtitle.animate().alpha(1f).setDuration(700L).start()
             tvMessage.alpha = 0f
+            tvMessage.translationY = 24f
             tvMessage.animate()
                 .alpha(1f)
-                .setDuration(800)
+                .translationY(0f)
+                .setDuration(800L)
                 .start()
-        }, 500)
+        }, 220L)
 
-        // 按钮延迟显示
         handler.postDelayed({
             btnReplay.alpha = 0f
-            btnReplay.translationX = -50f
+            btnReplay.translationX = -40f
             btnShare.alpha = 0f
-            btnShare.translationX = 50f
+            btnShare.translationX = 40f
 
-            btnReplay.animate()
-                .alpha(1f)
-                .translationX(0f)
-                .setDuration(500)
-                .start()
+            btnReplay.animate().alpha(1f).translationX(0f).setDuration(520L).start()
+            btnShare.animate().alpha(1f).translationX(0f).setDuration(520L).start()
+        }, 520L)
 
-            btnShare.animate()
-                .alpha(1f)
-                .translationX(0f)
-                .setDuration(500)
-                .start()
-        }, 1000)
+        val haloX = ObjectAnimator.ofFloat(haloView, "scaleX", 0.92f, 1.1f).apply {
+            duration = 2400L
+            repeatCount = ObjectAnimator.INFINITE
+            repeatMode = ObjectAnimator.REVERSE
+        }
+        val haloY = ObjectAnimator.ofFloat(haloView, "scaleY", 0.92f, 1.1f).apply {
+            duration = 2400L
+            repeatCount = ObjectAnimator.INFINITE
+            repeatMode = ObjectAnimator.REVERSE
+        }
+        val haloAlpha = ObjectAnimator.ofFloat(haloView, "alpha", 0.14f, 0.28f).apply {
+            duration = 2400L
+            repeatCount = ObjectAnimator.INFINITE
+            repeatMode = ObjectAnimator.REVERSE
+        }
+        AnimatorSet().apply {
+            playTogether(haloX, haloY, haloAlpha)
+            start()
+        }
     }
 
     private fun startHeartAnimation() {
         heartRunnable = object : Runnable {
             override fun run() {
-                // 添加新爱心
                 addHeart()
-                
-                // 更新现有爱心
                 updateHearts()
-                
-                // 重绘
-                heartContainer.invalidate()
-                
-                // 继续循环
-                handler.postDelayed(this, 50)
+                heartCanvasView.invalidate()
+                handler.postDelayed(this, 33L)
             }
         }
         handler.post(heartRunnable!!)
@@ -161,19 +188,21 @@ class EndingActivity : AppCompatActivity() {
         val width = heartContainer.width
         if (width == 0) return
 
-        val heart = Heart(
-            x = Random.nextFloat() * width,
-            y = -50f,
-            size = Random.nextFloat() * 30f + 15f,
-            speed = Random.nextFloat() * 2f + 1f,
-            alpha = Random.nextInt(150, 255),
-            rotation = Random.nextFloat() * 30f - 15f,
-            rotationSpeed = Random.nextFloat() * 2f - 1f
+        hearts.add(
+            Heart(
+                x = Random.nextFloat() * width,
+                y = heartContainer.height + 80f,
+                size = Random.nextFloat() * 24f + 12f,
+                speed = Random.nextFloat() * 2.2f + 0.8f,
+                alpha = Random.nextInt(90, 190),
+                rotation = Random.nextFloat() * 36f - 18f,
+                rotationSpeed = Random.nextFloat() * 1.4f - 0.7f,
+                driftPhase = Random.nextFloat() * (Math.PI * 2).toFloat(),
+                driftSpeed = Random.nextFloat() * 0.05f + 0.015f
+            )
         )
-        hearts.add(heart)
 
-        // 限制爱心数量
-        if (hearts.size > 30) {
+        if (hearts.size > 42) {
             hearts.removeAt(0)
         }
     }
@@ -183,48 +212,46 @@ class EndingActivity : AppCompatActivity() {
         val iterator = hearts.iterator()
         while (iterator.hasNext()) {
             val heart = iterator.next()
-            heart.y += heart.speed
+            heart.y -= heart.speed
+            heart.x += sin(heart.driftPhase) * 1.2f
             heart.rotation += heart.rotationSpeed
-            
-            if (heart.y > height + 50) {
+            heart.driftPhase += heart.driftSpeed
+            heart.alpha = (heart.alpha - 1).coerceAtLeast(0)
+
+            if (heart.y < -80f || heart.alpha <= 0 || heart.y > height + 80f) {
                 iterator.remove()
             }
         }
     }
 
-    // 自定义 View 来绘制爱心
-    private fun initHeartView() {
-        val customView = object : View(this) {
-            override fun onDraw(canvas: Canvas) {
-                super.onDraw(canvas)
-                for (heart in hearts) {
-                    drawHeart(canvas, heart)
-                }
-            }
+    private inner class HeartCanvasView(context: android.content.Context) : View(context) {
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+            hearts.forEach { drawHeart(canvas, it) }
         }
-        heartContainer.addView(customView)
     }
 
     private fun drawHeart(canvas: Canvas, heart: Heart) {
-        heartPaint.color = Color.argb(heart.alpha, 255, 100, 150)
+        heartPaint.color = Color.argb(heart.alpha, 255, 122, 170)
         heartPaint.style = Paint.Style.FILL
+        heartPaint.setShadowLayer(18f, 0f, 0f, Color.argb((heart.alpha * 0.4f).toInt(), 255, 120, 180))
 
         canvas.save()
         canvas.translate(heart.x, heart.y)
         canvas.rotate(heart.rotation)
 
-        val path = android.graphics.Path()
         val size = heart.size
-        path.moveTo(0f, -size / 2)
-        path.cubicTo(size / 2, -size, size, -size / 3, 0f, size)
-        path.cubicTo(-size, -size / 3, -size / 2, -size, 0f, -size / 2)
-
+        val path = Path().apply {
+            moveTo(0f, -size / 2f)
+            cubicTo(size / 2f, -size, size, -size / 3f, 0f, size)
+            cubicTo(-size, -size / 3f, -size / 2f, -size, 0f, -size / 2f)
+            close()
+        }
         canvas.drawPath(path, heartPaint)
         canvas.restore()
     }
 
     private fun initMusic() {
-        // 确保音乐继续播放
         MusicManager.play()
         isPlaying = true
         updateMusicButton()
@@ -252,20 +279,25 @@ class EndingActivity : AppCompatActivity() {
     }
 
     private fun startMainActivity() {
-        val intent = Intent(this, MainActivity::class.java)
-        startActivity(intent)
+        startActivity(Intent(this, MainActivity::class.java))
         finish()
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
     }
 
     private fun shareMoment() {
-        // 分享功能（简化版）
+        val shareText = buildString {
+            append("LoveAI\n")
+            append(tvMessage.text)
+            append("\n\nNow playing: ")
+            append(MusicManager.getCurrentSongName())
+        }
+
         val shareIntent = Intent().apply {
             action = Intent.ACTION_SEND
-            putExtra(Intent.EXTRA_TEXT, "LoveAI - 浪漫特效，送给最爱的你 ❤️")
+            putExtra(Intent.EXTRA_TEXT, shareText)
             type = "text/plain"
         }
-        startActivity(Intent.createChooser(shareIntent, "分享爱意"))
+        startActivity(Intent.createChooser(shareIntent, "Share"))
     }
 
     override fun onResume() {
@@ -274,11 +306,6 @@ class EndingActivity : AppCompatActivity() {
             MusicManager.play()
         }
         updateMusicName()
-    }
-
-    override fun onPause() {
-        super.onPause()
-        // 不停止音乐，让它在后台继续播放
     }
 
     override fun onDestroy() {

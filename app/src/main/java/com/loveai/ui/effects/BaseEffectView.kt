@@ -1,15 +1,21 @@
 package com.loveai.ui.effects
 
 import android.content.Context
-import android.graphics.*
+import android.graphics.BlurMaskFilter
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.RadialGradient
+import android.graphics.Shader
 import android.util.AttributeSet
 import android.view.View
 import com.loveai.model.Effect
 import com.loveai.model.EffectVariant
 
 /**
- * 所有动态效果视图的基类
- * 提供动画循环的基础框架和变体配置支持
+ * 所有动态特效视图的基类。
+ * 统一处理动画循环、变体读取、文字对比度增强和公共氛围叠层。
  */
 abstract class BaseEffectView @JvmOverloads constructor(
     context: Context,
@@ -17,12 +23,27 @@ abstract class BaseEffectView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
+    private data class AmbientOrb(
+        val xFactor: Float,
+        val yFactor: Float,
+        val radius: Float,
+        val driftX: Float,
+        val driftY: Float,
+        val phase: Float,
+        val alpha: Int
+    )
+
     protected var effect: Effect? = null
     protected var variant: EffectVariant? = null
     protected var isPlaying = true
-    private val frameDelay = 16L // ~60fps
 
-    // 变体配置的便捷访问属性
+    private val frameDelay = 16L
+    private var renderFrame = 0
+    private val ambientOrbs = mutableListOf<AmbientOrb>()
+    private val ambientPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val vignettePaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private var vignetteShader: RadialGradient? = null
+
     protected val primaryColor: Int
         get() = variant?.primaryColor ?: Color.parseColor("#FF69B4")
 
@@ -47,6 +68,7 @@ abstract class BaseEffectView @JvmOverloads constructor(
     private val animRunnable = object : Runnable {
         override fun run() {
             if (isPlaying) {
+                renderFrame++
                 onUpdateAnimation()
                 invalidate()
                 postDelayed(this, frameDelay)
@@ -60,24 +82,16 @@ abstract class BaseEffectView @JvmOverloads constructor(
         onEffectBound(effect)
     }
 
-    /**
-     * 子类实现：绑定效果后的初始化
-     */
     protected open fun onEffectBound(effect: Effect) {}
 
-    /**
-     * 子类实现：绘制效果
-     */
     abstract fun onDrawEffect(canvas: Canvas)
 
-    /**
-     * 子类实现：更新动画状态（每帧调用）
-     */
     abstract fun onUpdateAnimation()
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         onDrawEffect(canvas)
+        drawAmbientOverlay(canvas)
     }
 
     override fun onAttachedToWindow() {
@@ -88,6 +102,39 @@ abstract class BaseEffectView @JvmOverloads constructor(
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         stopAnimation()
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        if (w == 0 || h == 0) return
+
+        vignetteShader = RadialGradient(
+            w / 2f,
+            h / 2f,
+            maxOf(w, h) * 0.72f,
+            intArrayOf(
+                Color.TRANSPARENT,
+                Color.argb(26, 10, 10, 18),
+                Color.argb(150, 3, 3, 8)
+            ),
+            floatArrayOf(0.42f, 0.78f, 1f),
+            Shader.TileMode.CLAMP
+        )
+
+        ambientOrbs.clear()
+        repeat(9) { index ->
+            ambientOrbs.add(
+                AmbientOrb(
+                    xFactor = (0.1f + index * 0.1f).coerceAtMost(0.9f),
+                    yFactor = 0.18f + (index % 3) * 0.18f,
+                    radius = 36f + index * 8f,
+                    driftX = 10f + index * 1.8f,
+                    driftY = 6f + (index % 4) * 1.5f,
+                    phase = index * 0.85f,
+                    alpha = 12 + index * 3
+                )
+            )
+        }
     }
 
     fun startAnimation() {
@@ -105,18 +152,49 @@ abstract class BaseEffectView @JvmOverloads constructor(
         if (isPlaying) stopAnimation() else startAnimation()
     }
 
-    // ========== 文字对比度工具方法 ==========
+    protected fun currentRenderFrame(): Int = renderFrame
 
-    /**
-     * 修正颜色的 alpha 通道
-     */
+    private fun drawAmbientOverlay(canvas: Canvas) {
+        if (width == 0 || height == 0) return
+
+        for (orb in ambientOrbs) {
+            val offsetX = kotlin.math.sin(renderFrame * 0.01f + orb.phase) * orb.driftX
+            val offsetY = kotlin.math.cos(renderFrame * 0.008f + orb.phase * 1.3f) * orb.driftY
+            ambientPaint.color = adjustAlpha(primaryColor, orb.alpha.coerceAtMost(70))
+            ambientPaint.maskFilter = BlurMaskFilter(orb.radius * 0.55f, BlurMaskFilter.Blur.NORMAL)
+            canvas.drawCircle(
+                orb.xFactor * width + offsetX,
+                orb.yFactor * height + offsetY,
+                orb.radius,
+                ambientPaint
+            )
+        }
+
+        ambientPaint.maskFilter = null
+        ambientPaint.shader = LinearGradient(
+            0f,
+            0f,
+            width.toFloat(),
+            height.toFloat(),
+            intArrayOf(
+                adjustAlpha(primaryColor, 12),
+                Color.TRANSPARENT,
+                adjustAlpha(secondaryColor, 16)
+            ),
+            floatArrayOf(0f, 0.45f, 1f),
+            Shader.TileMode.CLAMP
+        )
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), ambientPaint)
+        ambientPaint.shader = null
+
+        vignettePaint.shader = vignetteShader
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), vignettePaint)
+    }
+
     protected fun adjustAlpha(color: Int, alpha: Int): Int {
         return Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color))
     }
 
-    /**
-     * 计算颜色的感知亮度 (0~255)
-     */
     protected fun luminance(color: Int): Float {
         val r = Color.red(color) / 255f
         val g = Color.green(color) / 255f
@@ -124,36 +202,18 @@ abstract class BaseEffectView @JvmOverloads constructor(
         return 0.299f * r + 0.587f * g + 0.114f * b
     }
 
-    /**
-     * 根据背景亮度计算合适的文字颜色（自适应对比度）
-     * 在深色背景上返回白色，在浅色背景上返回深色
-     */
     protected fun autoTextColor(bgColor: Int): Int {
         return if (luminance(bgColor) > 0.5f) {
-            Color.parseColor("#1A1A2E") // 深蓝黑色，适合浅色背景
+            Color.parseColor("#1A1A2E")
         } else {
             Color.WHITE
         }
     }
 
-    /**
-     * 计算文字阴影颜色：用主题色的强调色
-     */
     protected fun textGlowColor(): Int {
         return adjustAlpha(primaryColor, 0xB0)
     }
 
-    /**
-     * 绘制带对比度保护的文字
-     * 自动在文字下方绘制半透明暗色底板，确保任何背景下都能清晰阅读
-     *
-     * @param canvas 画布
-     * @param text 文字内容
-     * @param x 文字中心 X
-     * @param y 文字基线 Y
-     * @param paint 已配置好样式(字体/大小/对齐方式)的 Paint
-     * @param textType 文字类型：MAIN（主标题）或 SUB（副标题）
-     */
     protected fun drawContrastText(
         canvas: Canvas,
         text: String,
@@ -166,11 +226,9 @@ abstract class BaseEffectView @JvmOverloads constructor(
 
         val textWidth = paint.measureText(text)
         val fontMetrics = paint.fontMetrics
-        val textHeight = fontMetrics.descent - fontMetrics.ascent
 
         when (textType) {
             ContrastTextType.MAIN -> {
-                // 主标题：绘制圆角暗色底板
                 val paddingH = 24f
                 val paddingV = 14f
                 val rectLeft = x - textWidth / 2f - paddingH
@@ -179,24 +237,45 @@ abstract class BaseEffectView @JvmOverloads constructor(
                 val rectBottom = y + fontMetrics.descent + paddingV
                 val radius = 20f
 
-                val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-                bgPaint.color = Color.argb(0x99, 0x10, 0x10, 0x1A) // 半透明深色
-                bgPaint.style = Paint.Style.FILL
-                canvas.drawRoundRect(rectLeft, rectTop, rectRight, rectBottom, radius, radius, bgPaint)
+                val panelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = Color.argb(0x99, 0x10, 0x10, 0x1A)
+                    style = Paint.Style.FILL
+                }
+                canvas.drawRoundRect(rectLeft, rectTop, rectRight, rectBottom, radius, radius, panelPaint)
 
-                // 再叠一层模糊光晕
-                val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-                glowPaint.color = adjustAlpha(primaryColor, 0x25)
-                glowPaint.maskFilter = BlurMaskFilter(25f, BlurMaskFilter.Blur.NORMAL)
-                canvas.drawRoundRect(rectLeft - 5f, rectTop - 5f, rectRight + 5f, rectBottom + 5f, radius + 5f, radius + 5f, glowPaint)
-                glowPaint.maskFilter = null
+                val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    style = Paint.Style.STROKE
+                    strokeWidth = 1.5f
+                    color = adjustAlpha(primaryColor, 70)
+                }
+                canvas.drawRoundRect(rectLeft, rectTop, rectRight, rectBottom, radius, radius, borderPaint)
 
-                // 绘制文字
+                val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = adjustAlpha(primaryColor, 0x25)
+                    maskFilter = BlurMaskFilter(25f, BlurMaskFilter.Blur.NORMAL)
+                }
+                canvas.drawRoundRect(
+                    rectLeft - 5f,
+                    rectTop - 5f,
+                    rectRight + 5f,
+                    rectBottom + 5f,
+                    radius + 5f,
+                    radius + 5f,
+                    glowPaint
+                )
+
+                val outlinePaint = Paint(paint).apply {
+                    style = Paint.Style.STROKE
+                    strokeWidth = (paint.textSize / 14f).coerceAtLeast(2f)
+                    color = Color.argb(140, 0, 0, 0)
+                    strokeJoin = Paint.Join.ROUND
+                    strokeMiter = 10f
+                }
+                canvas.drawText(text, x, y, outlinePaint)
                 canvas.drawText(text, x, y, paint)
             }
+
             ContrastTextType.SUB -> {
-                // 副标题：增强对比度处理，更深的底板 + 阴影
-                // 注意：无论文字透明度如何变化，底板始终保持足够不透明度
                 val paddingH = 20f
                 val paddingV = 12f
                 val rectLeft = x - textWidth / 2f - paddingH
@@ -205,29 +284,33 @@ abstract class BaseEffectView @JvmOverloads constructor(
                 val rectBottom = y + fontMetrics.descent + paddingV
                 val radius = 16f
 
-                // 1. 先绘制更深的半透明底板（始终保持90%不透明度，不受文字alpha影响）
-                val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-                bgPaint.color = Color.argb(0xE6, 0x08, 0x08, 0x12) // 90%不透明度的深色底板
-                bgPaint.style = Paint.Style.FILL
-                canvas.drawRoundRect(rectLeft, rectTop, rectRight, rectBottom, radius, radius, bgPaint)
+                val panelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    color = Color.argb(0xE6, 0x08, 0x08, 0x12)
+                    style = Paint.Style.FILL
+                }
+                canvas.drawRoundRect(rectLeft, rectTop, rectRight, rectBottom, radius, radius, panelPaint)
 
-                // 2. 文字阴影不受paint alpha影响，始终保持清晰
-                val savedAlpha = paint.alpha // 保存原始alpha
-                paint.alpha = 255 // 临时设为不透明绘制阴影
+                val savedAlpha = paint.alpha
+                val outlinePaint = Paint(paint).apply {
+                    alpha = 255
+                    style = Paint.Style.STROKE
+                    strokeWidth = (paint.textSize / 18f).coerceAtLeast(1.2f)
+                    color = Color.argb(120, 0, 0, 0)
+                    strokeJoin = Paint.Join.ROUND
+                }
+                canvas.drawText(text, x, y, outlinePaint)
+
+                paint.alpha = 255
                 paint.setShadowLayer(8f, 0f, 3f, Color.argb(0xDD, 0x00, 0x00, 0x00))
                 canvas.drawText(text, x, y, paint)
-                // 恢复原始alpha和阴影设置
                 paint.alpha = savedAlpha
                 paint.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
             }
         }
     }
 
-    /**
-     * 对比度文字类型
-     */
     protected enum class ContrastTextType {
-        MAIN,   // 主标题 - 更大的底板和光晕
-        SUB     // 副标题 - 轻量级底板
+        MAIN,
+        SUB
     }
 }

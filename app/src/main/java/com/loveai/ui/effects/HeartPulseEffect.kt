@@ -51,6 +51,12 @@ class HeartPulseEffect @JvmOverloads constructor(
     }
 
     override fun onEffectBound(effect: Effect) {
+        frameCount = 0
+        scale = 1f
+        scaleDir = 1f
+        glowAlpha = 0f
+        textAlpha = 0f
+        pulseRings.clear()
         textPaint.apply {
             color = Color.WHITE
             textSize = 40f
