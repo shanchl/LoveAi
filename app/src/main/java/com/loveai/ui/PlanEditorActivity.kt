@@ -5,15 +5,19 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.loveai.R
+import com.loveai.manager.MusicManager
 import com.loveai.model.EffectType
+import com.loveai.model.PlanTheme
 import com.loveai.repository.PlanRepository
 
 class PlanEditorActivity : AppCompatActivity() {
@@ -25,10 +29,14 @@ class PlanEditorActivity : AppCompatActivity() {
     private lateinit var etPlanName: EditText
     private lateinit var etTitle: EditText
     private lateinit var etSubtitle: EditText
+    private lateinit var spTheme: Spinner
+    private lateinit var spSong: Spinner
+    private lateinit var tvThemeHint: TextView
     private lateinit var rvSelected: RecyclerView
     private lateinit var rvAvailable: RecyclerView
     private lateinit var btnSave: Button
     private lateinit var btnCancel: Button
+    private lateinit var btnApplyTheme: Button
 
     private lateinit var selectedAdapter: SelectedEffectsAdapter
     private lateinit var availableAdapter: AvailableEffectsAdapter
@@ -36,6 +44,8 @@ class PlanEditorActivity : AppCompatActivity() {
 
     private val selectedTypes = mutableListOf<EffectType>()
     private val allTypes = EffectType.values().toList()
+    private val themes = listOf<PlanTheme?>(null) + PlanTheme.values().toList()
+    private var songs: List<MusicManager.Song> = emptyList()
     private var editingPlanId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,8 +53,12 @@ class PlanEditorActivity : AppCompatActivity() {
         setContentView(R.layout.activity_plan_editor)
 
         planRepository = PlanRepository(this)
+        MusicManager.ensurePlaylist(this)
+
         initViews()
         initLists()
+        initThemeSelector()
+        initSongSelector()
         loadPlanIfNeeded()
     }
 
@@ -52,13 +66,49 @@ class PlanEditorActivity : AppCompatActivity() {
         etPlanName = findViewById(R.id.etPlanName)
         etTitle = findViewById(R.id.etTitle)
         etSubtitle = findViewById(R.id.etSubtitle)
+        spTheme = findViewById(R.id.spTheme)
+        spSong = findViewById(R.id.spSong)
+        tvThemeHint = findViewById(R.id.tvThemeHint)
         rvSelected = findViewById(R.id.rvSelectedEffects)
         rvAvailable = findViewById(R.id.rvAvailableEffects)
         btnSave = findViewById(R.id.btnSavePlan)
         btnCancel = findViewById(R.id.btnCancelEdit)
+        btnApplyTheme = findViewById(R.id.btnApplyTheme)
 
         btnSave.setOnClickListener { savePlan() }
         btnCancel.setOnClickListener { finish() }
+        btnApplyTheme.setOnClickListener { applyCurrentTheme() }
+    }
+
+    private fun initThemeSelector() {
+        val labels = themes.map { theme ->
+            theme?.label ?: "\u4e0d\u4f7f\u7528\u6a21\u677f"
+        }
+        val themeAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, labels).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+        spTheme.adapter = themeAdapter
+        spTheme.setSelection(0)
+        updateThemeHint()
+    }
+
+    private fun initSongSelector() {
+        songs = listOf(
+            MusicManager.Song(
+                id = -1,
+                key = "",
+                name = "\u4e0d\u7ed1\u5b9a\uff08\u4f7f\u7528\u5f53\u524d\u64ad\u653e\u961f\u5217\uff09"
+            )
+        ) + MusicManager.getPlaylist()
+
+        val songAdapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            songs.map { it.name }
+        ).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+        spSong.adapter = songAdapter
     }
 
     private fun initLists() {
@@ -100,17 +150,58 @@ class PlanEditorActivity : AppCompatActivity() {
     private fun loadPlanIfNeeded() {
         editingPlanId = intent.getStringExtra(EXTRA_PLAN_ID)
         val plan = editingPlanId?.let { planRepository.getPlanById(it) } ?: return
+
         etPlanName.setText(plan.name)
         etTitle.setText(plan.title)
         etSubtitle.setText(plan.subtitle)
         selectedTypes.clear()
         selectedTypes.addAll(plan.effectTypes)
         refreshLists()
+
+        val themeIndex = themes.indexOfFirst { it?.key == plan.themeKey }.takeIf { it >= 0 } ?: 0
+        spTheme.setSelection(themeIndex)
+        updateThemeHint()
+
+        val songIndex = songs.indexOfFirst { it.key == (plan.songKey ?: "") }.takeIf { it >= 0 } ?: 0
+        spSong.setSelection(songIndex)
+    }
+
+    private fun applyCurrentTheme() {
+        val theme = getSelectedTheme() ?: run {
+            Toast.makeText(this, "\u8bf7\u5148\u9009\u62e9\u4e00\u4e2a\u4e3b\u9898\u6a21\u677f", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (etPlanName.text.isNullOrBlank()) {
+            etPlanName.setText(theme.defaultPlanName)
+        }
+        etTitle.setText(theme.defaultTitle)
+        etSubtitle.setText(theme.defaultSubtitle)
+        selectedTypes.clear()
+        selectedTypes.addAll(theme.recommendedEffects)
+        refreshLists()
+        updateThemeHint()
+    }
+
+    private fun getSelectedTheme(): PlanTheme? = themes.getOrNull(spTheme.selectedItemPosition)
+
+    private fun getSelectedSongKey(): String? {
+        val song = songs.getOrNull(spSong.selectedItemPosition) ?: return null
+        return song.key.ifBlank { null }
     }
 
     private fun refreshLists() {
         selectedAdapter.submitList(selectedTypes.toList())
         availableAdapter.submitList(allTypes, selectedTypes.toSet(), selectedTypes.size >= 8)
+    }
+
+    private fun updateThemeHint() {
+        val theme = getSelectedTheme()
+        tvThemeHint.text = if (theme == null) {
+            "\u4e0d\u5957\u7528\u9884\u8bbe\uff0c\u4f60\u53ef\u4ee5\u81ea\u7531\u7f16\u6392\u6587\u6848\u548c\u7279\u6548\u3002"
+        } else {
+            "${theme.label} \u00b7 ${theme.description}"
+        }
     }
 
     private fun savePlan() {
@@ -124,6 +215,8 @@ class PlanEditorActivity : AppCompatActivity() {
             title = etTitle.text.toString().trim(),
             subtitle = etSubtitle.text.toString().trim(),
             effectTypes = selectedTypes,
+            themeKey = getSelectedTheme()?.key,
+            songKey = getSelectedSongKey(),
             existingId = editingPlanId
         )
 

@@ -155,7 +155,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnPlanEditor.setOnClickListener {
-            startActivity(Intent(this, PlanEditorActivity::class.java))
+            startActivity(Intent(this, PlanEditorActivity::class.java).apply {
+                viewModel.getCurrentPlan()?.id?.let { putExtra(PlanEditorActivity.EXTRA_PLAN_ID, it) }
+            })
         }
 
         btnPlanLibrary.setOnClickListener {
@@ -191,6 +193,16 @@ class MainActivity : AppCompatActivity() {
         val planId = intent.getStringExtra(EXTRA_PLAN_ID) ?: return
         val plan = planRepository.getPlanById(planId) ?: return
         viewModel.loadPlan(plan)
+        applyPlanMusic(plan.songKey)
+    }
+
+    private fun applyPlanMusic(songKey: String?) {
+        val targetSongKey = songKey ?: return
+        MusicManager.ensurePlaylist(this)
+        if (MusicManager.playByKey(targetSongKey)) {
+            btnMusic.alpha = 1f
+            updateMusicUI()
+        }
     }
 
     private fun updateMusicUI() {

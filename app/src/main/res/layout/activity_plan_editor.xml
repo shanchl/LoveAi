@@ -18,6 +18,39 @@
             android:textSize="24sp"
             android:textStyle="bold" />
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="&#20027;&#39064;&#27169;&#26495;"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/spTheme"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="#22FFFFFF"
+            android:padding="10dp"
+            android:spinnerMode="dropdown" />
+
+        <TextView
+            android:id="@+id/tvThemeHint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="#CCFFFFFF"
+            android:textSize="13sp" />
+
+        <Button
+            android:id="@+id/btnApplyTheme"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="&#24212;&#29992;&#27169;&#26495;" />
+
         <EditText
             android:id="@+id/etPlanName"
             android:layout_width="match_parent"
@@ -50,6 +83,24 @@
             android:padding="12dp"
             android:textColor="#FFFFFF"
             android:textColorHint="#88FFFFFF" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="&#32465;&#23450;&#38899;&#20048;"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/spSong"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="#22FFFFFF"
+            android:padding="10dp"
+            android:spinnerMode="dropdown" />
 
         <TextView
             android:layout_width="wrap_content"

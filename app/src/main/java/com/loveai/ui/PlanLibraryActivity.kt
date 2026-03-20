@@ -12,7 +12,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.loveai.R
+import com.loveai.manager.MusicManager
 import com.loveai.model.LovePlan
+import com.loveai.model.PlanTheme
 import com.loveai.repository.PlanRepository
 
 class PlanLibraryActivity : AppCompatActivity() {
@@ -28,11 +30,16 @@ class PlanLibraryActivity : AppCompatActivity() {
         setContentView(R.layout.activity_plan_library)
 
         repository = PlanRepository(this)
+        MusicManager.ensurePlaylist(this)
+
         rvPlans = findViewById(R.id.rvPlans)
         tvEmpty = findViewById(R.id.tvEmptyPlans)
         btnCreate = findViewById(R.id.btnCreatePlan)
 
         adapter = PlanAdapter(
+            resolveSongName = { songKey ->
+                MusicManager.getPlaylist().firstOrNull { it.key == songKey }?.name
+            },
             onOpen = { plan ->
                 startActivity(Intent(this, MainActivity::class.java).apply {
                     putExtra(MainActivity.EXTRA_PLAN_ID, plan.id)
@@ -69,6 +76,7 @@ class PlanLibraryActivity : AppCompatActivity() {
     }
 
     private class PlanAdapter(
+        private val resolveSongName: (String?) -> String?,
         private val onOpen: (LovePlan) -> Unit,
         private val onEdit: (LovePlan) -> Unit,
         private val onDelete: (LovePlan) -> Unit
@@ -90,7 +98,12 @@ class PlanLibraryActivity : AppCompatActivity() {
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val plan = items[position]
             holder.tvName.text = plan.name
-            holder.tvSummary.text = "${plan.effectTypes.size} \u4e2a\u7279\u6548 \u00b7 ${plan.title}"
+
+            val themeLabel = PlanTheme.fromKey(plan.themeKey)?.label ?: "\u81ea\u5b9a\u4e49"
+            val songLabel = resolveSongName(plan.songKey) ?: "\u672a\u7ed1\u5b9a\u66f2\u76ee"
+            holder.tvSummary.text =
+                "${plan.effectTypes.size} \u4e2a\u7279\u6548 \u00b7 ${themeLabel} \u00b7 ${songLabel}"
+
             holder.btnOpen.setOnClickListener { onOpen(plan) }
             holder.btnEdit.setOnClickListener { onEdit(plan) }
             holder.btnDelete.setOnClickListener { onDelete(plan) }

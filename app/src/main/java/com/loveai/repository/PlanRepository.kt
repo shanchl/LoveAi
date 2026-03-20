@@ -37,6 +37,8 @@ class PlanRepository(context: Context) {
         title: String,
         subtitle: String,
         effectTypes: List<EffectType>,
+        themeKey: String? = null,
+        songKey: String? = null,
         existingId: String? = null
     ): LovePlan {
         val plans = getAllPlans().toMutableList()
@@ -46,6 +48,8 @@ class PlanRepository(context: Context) {
             title = title.ifBlank { "\u7ed9\u4f60\u7684\u6d6a\u6f2b\u7247\u6bb5" },
             subtitle = subtitle,
             effectTypes = effectTypes.take(8),
+            themeKey = themeKey,
+            songKey = songKey,
             createdAt = System.currentTimeMillis()
         )
 
@@ -73,6 +77,8 @@ class PlanRepository(context: Context) {
                     put("name", plan.name)
                     put("title", plan.title)
                     put("subtitle", plan.subtitle)
+                    put("themeKey", plan.themeKey)
+                    put("songKey", plan.songKey)
                     put("createdAt", plan.createdAt)
                     put(
                         "effectTypes",
@@ -101,6 +107,8 @@ class PlanRepository(context: Context) {
             title = obj.optString("title"),
             subtitle = obj.optString("subtitle"),
             effectTypes = types.take(8),
+            themeKey = obj.optString("themeKey").ifBlank { null },
+            songKey = obj.optString("songKey").ifBlank { null },
             createdAt = obj.optLong("createdAt")
         )
     }
