@@ -49,10 +49,10 @@ class LoveViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * 生成随机效果（6~8个）
+     * 生成随机效果（固定8个）
      */
     fun generateRandomEffects() {
-        val count = effectRepository.getAllEffectTypes().size
+        val count = 8
         val newEffects = effectRepository.getRandomEffects(count)
         // 恢复收藏状态
         val updatedEffects = newEffects.map { effect ->
