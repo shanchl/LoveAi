@@ -1,21 +1,26 @@
 # LoveAI
 
-LoveAI 是一个以“浪漫表达”为主题的 Android 单应用项目。应用通过多种自定义动态特效、情感文案和背景音乐组合，生成一段可自动播放的沉浸式展示流程，适合做表白、小礼物、纪念日互动演示等场景。
+LoveAI 是一个以“浪漫表达”为主题的 Android 应用。项目通过启动页、随机特效轮播、文案动画、背景音乐、收藏与结尾页，组合出一段适合表白、纪念日、小礼物展示的沉浸式播放流程。
 
-项目整体采用典型的 Android 分层方式组织代码：`ui` 负责页面与交互，`viewmodel` 负责状态编排，`repository` 负责效果与收藏数据，`manager` 负责音乐播放，自定义特效则集中在 `ui/effects` 中完成绘制与动画。
+当前仓库已完成二期优化，重点解决了播放节奏、启动页与结束页气质、12 类浪漫特效精修、文字样式强化、音乐播放列表与控制稳定性等问题。三期将不再以“纯视觉打磨”为主，而是进入“功能扩展阶段”。
 
-## 项目定位
+## 当前阶段
 
-- 平台：Android
-- 语言：Kotlin
-- 构建：Gradle / Android Application
-- 最低版本：Android 5.0（API 21）
-- 目标版本：Android 14（API 34）
-- 核心体验：启动倒计时 -> 随机浪漫特效轮播 -> 收藏/音乐控制 -> 结束页回放与分享
+- 当前主线分支：`codex/phase2-polish`
+- 当前阶段定位：二期完成版
+- 二期核心目标：提升页面完成度、特效质量、文字表现、转场与音乐体验
 
-## 系统架构
+## 技术栈
 
-### 分层说明
+- Android
+- Kotlin
+- ViewPager2
+- LiveData / ViewModel
+- SharedPreferences
+- MediaPlayer
+- Canvas 自定义绘制动画
+
+## 系统结构
 
 ```text
 SplashActivity / MainActivity / FavoriteActivity / EndingActivity
@@ -30,67 +35,45 @@ SplashActivity / MainActivity / FavoriteActivity / EndingActivity
          |                      |
          v                      v
    EffectVariants         SharedPreferences
-         |
-         v
-  Effect / EffectVariant / LoveMessages
 
-同时并行存在：
-MusicManager -> 负责背景音乐、歌单、切歌、播放模式
-BaseEffectView + 各 EffectView -> 负责动态绘制与逐帧动画
-PageTransitionManager -> 负责 ViewPager 页面切换动画
+并行支撑模块：
+MusicManager
+BaseEffectView + 12 个 EffectView
+PageTransitionManager
 ```
 
-### 核心模块
+### 模块职责
 
-- `app/src/main/java/com/loveai/ui`
-  负责四个页面的生命周期、控件绑定、导航跳转和交互事件。
-- `app/src/main/java/com/loveai/viewmodel/LoveViewModel.kt`
-  负责当前特效列表、当前页索引、自动播放状态、收藏数据的统一管理。
-- `app/src/main/java/com/loveai/repository`
-  负责特效数据生成、变体配置和收藏持久化。
-- `app/src/main/java/com/loveai/manager/MusicManager.kt`
-  负责扫描 `res/raw` 音频资源并构建播放列表，控制播放/暂停/上下首/播放模式。
-- `app/src/main/java/com/loveai/ui/effects`
-  负责不同浪漫特效的 Canvas 绘制、粒子动画、文案展示以及文本表现效果。
+- `ui`
+  负责启动页、主展示页、收藏页、结束页、页面跳转和交互控制。
+- `viewmodel/LoveViewModel.kt`
+  负责当前特效列表、播放索引、自动轮播状态、收藏同步。
+- `repository`
+  负责特效数据生成、特效变体池、收藏持久化。
+- `manager/MusicManager.kt`
+  负责扫描 `res/raw` 音乐资源、构建播放列表、播放控制、切歌与模式切换。
+- `ui/effects`
+  负责 12 类 Canvas 特效的绘制、动画状态、文字表现和局部氛围设计。
 
-## 业务功能
+## 当前业务功能
 
 ### 1. 启动页
 
-- `SplashActivity` 负责 3 秒倒计时进入主页面。
-- 页面包含渐变背景、漂浮爱心、数字动画和 loading 提示。
-- 启动时初始化背景音乐，保证进入主界面后音乐可无缝继续。
+- 3 秒倒计时进入主页面
+- 启动阶段初始化音乐播放列表
+- 标题、副标题、光晕、爱心浮动动画
 
 ### 2. 主展示页
 
-- `MainActivity` 是主业务入口。
-- 使用 `ViewPager2` 承载多页动态特效，每次从效果池中随机生成 6 到 8 个页面。
-- 页面支持自动轮播、手动滑动、播放/暂停、收藏当前效果、打开收藏夹、音乐控制、歌单弹窗。
-- 播放到最后一个特效后，延迟 2 秒跳转到结束页。
+- 使用 `ViewPager2` 轮播特效页
+- 每轮固定随机生成 8 个页面
+- 8 个页面从 12 种特效类型里随机选出，不重复类型
+- 支持自动轮播、手动滑动、暂停继续、收藏、音乐控制、播放列表弹窗
+- 最后一页至少停留 10 秒后进入结束页
 
-### 3. 收藏页
+### 3. 特效系统
 
-- `FavoriteActivity` 读取用户已收藏的 `variantId`，重建为完整 `Effect` 列表。
-- 使用 `GridView` 以双列形式展示收藏特效预览。
-- 若没有收藏内容，则展示空状态文案。
-
-### 4. 结束页
-
-- `EndingActivity` 作为整段展示流程的收尾页面。
-- 页面展示感谢文案、浮动爱心动画、重新开始按钮和系统分享按钮。
-- 音乐在此页面继续播放，可单独暂停/恢复。
-
-### 5. 音乐系统
-
-- `MusicManager` 会优先扫描 `res/raw` 下的音频资源，自动生成歌单。
-- 当前项目内已经包含 `bg_music.mp3` 与 `love_song_1.mp3` 两首音乐资源。
-- 支持列表循环、单曲循环、随机播放三种模式，主页面提供上下首、播放/暂停、歌单查看等控制。
-
-## 数据模型与业务实体
-
-### EffectType
-
-项目定义了 12 类基础浪漫特效：
+当前共有 12 类基础特效：
 
 - `HEART_RAIN`
 - `FIREWORK`
@@ -105,211 +88,150 @@ PageTransitionManager -> 负责 ViewPager 页面切换动画
 - `BUTTERFLY`
 - `AURORA`
 
-### EffectVariant
+每一种特效都有多组 `EffectVariant`，随机时不是只换文案，而是同时切换：
 
-`EffectVariant` 是真正驱动页面表现的配置实体，包含：
-
-- 变体 ID
-- 基础特效类型
-- 变体名称
-- 主色/辅色/背景色
-- 动画速度
+- 主色 / 辅色 / 背景色
 - 粒子数量
-- 主文案与副文案
+- 动画速度
+- 主标题 / 副标题文案
 
-`EffectVariants.kt` 预定义了全部视觉变体。按代码实际统计，当前总计约 100 个变体，远多于简单的“若干特效页面”概念，是项目最核心的内容资产。
+### 4. 文字系统
 
-### Effect
+- 主标题和副标题支持统一增强绘制
+- 已加入多种布局方向与排版风格
+- 不同特效页会使用不同的文字布局策略
+- 已加入安全区域，避免与底部按钮和音乐栏重叠
 
-`Effect` 是运行时展示对象，包含：
+### 5. 收藏系统
 
-- 唯一运行时 ID
-- 一个 `EffectVariant`
-- 收藏状态 `isFavorite`
+- 支持收藏当前特效
+- 收藏数据使用 `SharedPreferences` 持久化
+- 收藏页支持网格浏览已收藏特效
 
-它相当于“当前要展示的一页”。
+### 6. 音乐系统
 
-## 代码逻辑梳理
+- 自动扫描 `res/raw` 下的音乐资源
+- 当前默认包含：
+  - `bg_music.mp3`
+  - `love_song_1.mp3`
+- 支持播放 / 暂停 / 上一首 / 下一首 / 播放列表查看
+- 支持循环、单曲、随机模式
+- 已修复“播放列表为空”与“用户手动暂停后被页面偷偷恢复”的问题
 
-### 1. 随机效果生成链路
+### 7. 结束页
 
-主流程由 `LoveViewModel.generateRandomEffects()` 发起：
+- 展示感谢文案和漂浮爱心
+- 支持重新开始
+- 支持系统分享
+- 支持单独控制音乐播放状态
 
-1. 随机决定本轮展示数量，范围为 6 到 8 页。
-2. 调用 `EffectRepository.getRandomEffects(count)`。
-3. `EffectRepository` 再委托 `EffectVariants.getRandomVariants(count)` 选出若干变体。
-4. `EffectVariants` 先按 `baseType` 分组，优先确保同一轮中不重复同一种基础特效类型。
-5. 每个变体再包装成 `Effect` 对象，生成唯一 ID。
-6. `LoveViewModel` 根据收藏仓库修正 `isFavorite` 状态。
-7. `MainActivity` 观察 `effects`，更新 `ViewPager2` 列表与底部指示器。
+## 二期完成内容
 
-这条链路的重点是“随机但尽量不重复类型”，确保每一轮展示既多样又有新鲜感。
+二期主要完成了以下升级：
 
-### 2. 页面轮播逻辑
+- 修正最后一页停留时间过短的问题
+- 重做启动页与结束页氛围
+- 对 12 类特效逐个做精修
+- 增强页面切换过渡
+- 优化音乐初始化与播放列表逻辑
+- 强化文字表现与布局安全区
+- 修复部分文字布局重叠问题
 
-`MainActivity` 通过 `Handler + Runnable` 实现自动轮播：
+## 当前随机逻辑
 
-- 默认每页停留 10 秒。
-- 当用户点击暂停或页面已结束时，停止轮播任务。
-- 当用户手动滑动页面时，会重新计算下一次自动轮播时间。
-- 切页时不是直接依赖默认滑动，而是通过 `switchToNextPageWithFade()` 做一次淡出、切页、淡入的过渡。
-- `PageTransitionManager` 还额外给 `ViewPager2` 提供透明度和缩放过渡，让页面切换更柔和。
+项目当前采用“固定 8 页、从 12 类里随机抽取”的策略：
 
-### 3. 特效渲染机制
+1. 从 12 个基础特效类型中打乱顺序
+2. 取前 8 个类型
+3. 每个类型内部再随机一个变体
+4. 生成一轮展示列表
 
-所有特效 View 都继承 `BaseEffectView`：
+这意味着：
 
-- `bindEffect()` 绑定当前页的 `EffectVariant`。
-- `onUpdateAnimation()` 每约 16ms 被调用一次，用于更新粒子、位置、透明度等状态。
-- `onDrawEffect()` 负责真正的 Canvas 绘制。
-- 基类统一封装了颜色获取、动画循环、文本对比度处理和文字底板绘制逻辑。
+- 每一轮不会重复同一种基础特效
+- 但不会在一轮中展示全部 12 种
+- 重新开始时会重新随机，包含结尾页点击“重新开始”进入主页面的场景
 
-这种设计把“特效共性”和“特效差异”分离开了：
+## 三期方向
 
-- 共性：帧循环、颜色访问、文本增强、播放控制。
-- 差异：每种特效如何初始化、如何更新粒子、如何绘制背景和文字。
+三期建议从“视觉产品”上升到“可配置的表达工具”，重点做功能扩展，而不是继续只磨动画。结合二期现状，建议扩展下面几类能力。
 
-### 4. 文案展示逻辑
+### 1. 表达内容自定义
 
-- `LoveMessages` 按特效类别维护情感文案池。
-- 每个变体在定义时就绑定了一组主文案和副文案。
-- 文案不是页面层写死，而是作为视觉配置的一部分跟随变体走。
-- `TextEffectManager` 为不同类型文本提供横排、竖排、波浪、弧形、散开、下落等展示方式。
-- `TypewriterEffect` 还实现了独立的打字机演出：逐字出现、光标闪烁、完成后浮动和发光。
+- 允许用户自定义主标题、副标题、署名、日期
+- 支持选择“告白 / 纪念日 / 生日 / 道歉 / 异地思念”等主题模板
+- 支持把一轮展示保存成专属方案，而不是每次完全随机
 
-这意味着项目不仅是“粒子特效集合”，而是“视觉特效 + 情绪文案 + 文本动画”的组合引擎。
+### 2. 特效编排功能
 
-### 5. 收藏逻辑
+- 允许用户自己选择 8 个特效，而不是只能随机
+- 支持调整播放顺序
+- 支持锁定某几个喜欢的特效，剩余页面再随机
+- 支持单个特效预览与替换
 
-收藏由 `FavoriteRepository` 管理：
+### 3. 音乐与声音扩展
 
-- 持久化介质是 `SharedPreferences`。
-- 存储的不是完整 `Effect`，而是 `variantId` 集合。
-- 读取时根据 `variantId` 到 `EffectVariants` 反查完整变体，再重新构建 `Effect`。
+- 支持用户选择默认背景音乐
+- 支持本地导入音乐或指定播放列表
+- 支持每套方案绑定独立音乐
+- 支持音量渐入渐出、切页淡入淡出
 
-这种做法的优点是：
+### 4. 作品保存与分享升级
 
-- 存储结构轻量。
-- 不依赖运行时随机 ID。
-- 收藏记录稳定，应用重启后依旧可以恢复。
+- 支持保存当前方案
+- 支持生成“我的表白卡片 / 我的纪念方案”
+- 支持导出为视频、GIF 或长截图
+- 支持生成分享口令或二维码
 
-### 6. 音乐逻辑
+### 5. 收藏系统升级
 
-`MusicManager` 使用单例对象封装 `MediaPlayer`：
+- 收藏不再只收藏单个特效，支持收藏整套播放方案
+- 收藏项支持重命名、分组、删除、再次编辑
+- 支持“最近使用”与“我创建的方案”
 
-- 启动时初始化播放器。
-- 主页面首次进入时扫描 `R.raw` 自动构建歌单。
-- 可以播放、暂停、切歌、按索引播放、获取当前歌曲名。
-- 播放完成后根据当前播放模式决定下一步行为。
-- 页面销毁时默认不立即释放音乐，确保从主页面跳到结束页时音乐不中断。
+### 6. 数据化配置能力
 
-## 页面与模块关系
+- 将特效变体、文案模板、主题包逐步从硬编码升级为配置化
+- 为后续新增主题活动、节日专题、联名皮肤预留入口
+- 为“在线更新素材”或“扩展包”能力做结构准备
 
-### 页面流转
+## 推荐三期范围
 
-```text
-SplashActivity
-    -> MainActivity
-        -> FavoriteActivity
-        -> EndingActivity
-             -> MainActivity（Replay）
-```
+如果三期只上升一个阶段，不建议一下做太大。更合适的方案是：
 
-### 页面职责对应
+- 主题模板选择
+- 自定义文案
+- 8 页特效编排
+- 方案保存与再次打开
+- 音乐选择
 
-- `SplashActivity`：启动动画、倒计时、音乐预热。
-- `MainActivity`：随机特效展示、主交互、轮播调度、音乐控制。
-- `FavoriteActivity`：收藏内容浏览。
-- `EndingActivity`：收尾演出、分享、重新开始。
+这 5 项做完后，项目就会从“随机浪漫特效播放器”升级成“可编辑的浪漫表达生成器”。
 
 ## 目录结构
 
 ```text
-loveai/
-├─ app/
-│  ├─ src/main/
-│  │  ├─ java/com/loveai/
-│  │  │  ├─ manager/
-│  │  │  │  └─ MusicManager.kt
-│  │  │  ├─ model/
-│  │  │  │  └─ Effect.kt
-│  │  │  ├─ repository/
-│  │  │  │  ├─ EffectRepository.kt
-│  │  │  │  ├─ EffectVariants.kt
-│  │  │  │  └─ FavoriteRepository.kt
-│  │  │  ├─ ui/
-│  │  │  │  ├─ SplashActivity.kt
-│  │  │  │  ├─ MainActivity.kt
-│  │  │  │  ├─ FavoriteActivity.kt
-│  │  │  │  ├─ EndingActivity.kt
-│  │  │  │  ├─ PageTransitionManager.kt
-│  │  │  │  └─ effects/
-│  │  │  └─ viewmodel/
-│  │  │     └─ LoveViewModel.kt
-│  │  ├─ res/
-│  │  │  ├─ layout/
-│  │  │  ├─ drawable/
-│  │  │  ├─ raw/
-│  │  │  └─ values/
-│  │  └─ AndroidManifest.xml
-│  └─ build.gradle
-├─ build.gradle
-├─ settings.gradle
-└─ BUILD_GUIDE.md
+app/src/main/java/com/loveai/
+├─ manager/
+├─ model/
+├─ repository/
+├─ ui/
+│  └─ effects/
+└─ viewmodel/
 ```
 
-## 构建与运行
+## 构建说明
 
-### 开发环境
-
-- Android Studio 任意较新稳定版
-- JDK 17
-- Android SDK 34
-
-### 直接运行
-
-```bash
-./gradlew assembleDebug
-```
-
-Windows:
+常规命令：
 
 ```powershell
 .\gradlew.bat assembleDebug
 ```
 
-Debug APK 默认输出路径：
+当前仓库需要注意：
 
-```text
-app/build/outputs/apk/debug/app-debug.apk
-```
-
-## 依赖与技术选型
-
-- `androidx.appcompat`
-- `androidx.core-ktx`
-- `material`
-- `constraintlayout`
-- `viewpager2`
-- `lifecycle-viewmodel-ktx`
-- `lifecycle-livedata-ktx`
-- `activity-ktx`
-
-项目没有引入复杂网络层、数据库或第三方动画框架，主要依靠 Android 原生绘制能力、`MediaPlayer`、`LiveData` 和 `ViewModel` 完成体验搭建。
-
-## 适合继续演进的方向
-
-- 把乱码资源文件统一转成 UTF-8，修复部分中文注释和字符串编码问题。
-- 为 `MusicManager` 增加更稳健的生命周期与异常处理。
-- 为收藏页增加点击预览、删除收藏、分享收藏效果等能力。
-- 将特效配置抽离为 JSON 或本地配置文件，降低后续扩展成本。
-- 为 `ViewModel` 和仓库层补充单元测试。
-- 增加应用截图、录屏或设计稿，让 README 更完整。
+- 仓库缺少 `gradle/wrapper/gradle-wrapper.jar`
+- 因此默认 `gradlew` 方式在当前仓库状态下无法直接运行
 
 ## 总结
 
-这个项目本质上是一个“浪漫特效播放引擎”示例应用。它的技术重点不在复杂业务系统，而在于把随机特效、视觉配置、情感文案、背景音乐和页面流转编排成一段完整的沉浸式体验。对于接手维护者来说，最值得优先理解的三个点是：
-
-1. `EffectVariants` 如何定义内容资产。
-2. `LoveViewModel` 如何组织页面播放状态。
-3. `BaseEffectView` 如何统一承载所有自定义动画绘制。
+二期已经把 LoveAI 从“可运行”推进到了“体验更完整的浪漫展示应用”。三期建议不要再继续做纯视觉细磨，而是围绕“自定义、编排、保存、分享”这四个关键词做功能扩展，让它进入更完整的产品阶段。
