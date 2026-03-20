@@ -1,15 +1,20 @@
 package com.loveai.ui.effects
 
 import android.content.Context
-import android.graphics.*
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.Shader
+import android.graphics.Typeface
 import android.util.AttributeSet
 import com.loveai.model.Effect
-import kotlin.math.*
+import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * 效果1：心形粒子飘落
- * 支持多种变体配置（颜色、速度、数量等）
+ * 第三轮精修：做出前中后景层次感，让心雨不再只是“随机往下掉”。
  */
 class HeartRainEffect @JvmOverloads constructor(
     context: Context,
@@ -26,30 +31,35 @@ class HeartRainEffect @JvmOverloads constructor(
         var rotSpeed: Float,
         var color: Int,
         var swingOffset: Float,
-        var swingAmplitude: Float
+        var swingAmplitude: Float,
+        var layer: Int
     )
 
     private val hearts = mutableListOf<Heart>()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val subTextPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val streakPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     private var frameCount = 0
-    private val heartPath = Path()
-    private val bgPaint = Paint()
-    private var textAlpha = 0f       // 文字淡入透明度
-    private var textOffsetY = 30f    // 文字上浮偏移量
+    private var textAlpha = 0f
+    private var textOffsetY = 30f
+    private var textGlow = 0f
 
     override fun onEffectBound(effect: Effect) {
         frameCount = 0
         textAlpha = 0f
         textOffsetY = 30f
+        textGlow = 0f
+
         textPaint.apply {
             color = Color.WHITE
             textSize = 42f
             typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD_ITALIC)
             textAlign = Paint.Align.CENTER
-            setShadowLayer(6f, 0f, 2f, textGlowColor())
+            setShadowLayer(8f, 0f, 2f, textGlowColor())
         }
         subTextPaint.apply {
             color = adjustAlpha(primaryColor, 0xFF)
@@ -61,107 +71,141 @@ class HeartRainEffect @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        
-        // 初始化心形粒子
         hearts.clear()
-        val count = particleCount.coerceIn(20, 100)
+
+        val count = particleCount.coerceIn(28, 120)
         repeat(count) {
             hearts.add(createHeart(w, h, true))
         }
-        
-        // 设置背景渐变 - 使用变体的主色调
-        val gradientColors = intArrayOf(
-            adjustAlpha(primaryColor, 0x1A),
-            adjustAlpha(secondaryColor, 0x1A),
-            backgroundColor
-        )
+
         bgPaint.shader = LinearGradient(
-            0f, 0f, 0f, h.toFloat(),
-            gradientColors,
+            0f,
+            0f,
+            0f,
+            h.toFloat(),
+            intArrayOf(
+                adjustAlpha(primaryColor, 24),
+                adjustAlpha(secondaryColor, 18),
+                backgroundColor
+            ),
+            floatArrayOf(0f, 0.35f, 1f),
+            Shader.TileMode.CLAMP
+        )
+
+        streakPaint.shader = LinearGradient(
+            0f,
+            0f,
+            w.toFloat(),
+            h.toFloat(),
+            intArrayOf(
+                Color.TRANSPARENT,
+                adjustAlpha(primaryColor, 18),
+                Color.TRANSPARENT
+            ),
             floatArrayOf(0f, 0.5f, 1f),
             Shader.TileMode.CLAMP
         )
     }
 
-    private fun createHeart(w: Int, h: Int, randomY: Boolean = false): Heart {
-        val size = Random.nextFloat() * 50f + 15f
-        val speed = (Random.nextFloat() * 2.5f + 0.8f) * animationSpeed
-        val alpha = Random.nextInt(120, 255)
-        
-        // 基于主色调生成变体颜色
-        val r = Color.red(primaryColor)
-        val g = Color.green(primaryColor)
-        val b = Color.blue(primaryColor)
+    private fun createHeart(w: Int, h: Int, randomY: Boolean): Heart {
+        val layer = Random.nextInt(3)
+        val baseSize = when (layer) {
+            0 -> Random.nextFloat() * 16f + 10f
+            1 -> Random.nextFloat() * 24f + 16f
+            else -> Random.nextFloat() * 34f + 22f
+        }
+        val speed = when (layer) {
+            0 -> Random.nextFloat() * 1.2f + 0.8f
+            1 -> Random.nextFloat() * 1.6f + 1.2f
+            else -> Random.nextFloat() * 2.2f + 1.6f
+        } * animationSpeed
+
+        val alpha = when (layer) {
+            0 -> Random.nextInt(60, 120)
+            1 -> Random.nextInt(110, 180)
+            else -> Random.nextInt(170, 245)
+        }
+
+        val colorBase = if (Random.nextBoolean()) primaryColor else secondaryColor
         val color = Color.argb(
             alpha,
-            (r + Random.nextInt(-30, 30)).coerceIn(0, 255),
-            (g + Random.nextInt(-30, 30)).coerceIn(0, 255),
-            (b + Random.nextInt(-30, 30)).coerceIn(0, 255)
+            (Color.red(colorBase) + Random.nextInt(-18, 19)).coerceIn(0, 255),
+            (Color.green(colorBase) + Random.nextInt(-12, 13)).coerceIn(0, 255),
+            (Color.blue(colorBase) + Random.nextInt(-18, 19)).coerceIn(0, 255)
         )
-        
+
         return Heart(
             x = Random.nextFloat() * w,
-            y = if (randomY) Random.nextFloat() * h else -size * 2,
-            size = size,
+            y = if (randomY) Random.nextFloat() * h else -baseSize * 3f,
+            size = baseSize,
             speed = speed,
             alpha = alpha,
             rotation = Random.nextFloat() * 360f,
-            rotSpeed = (Random.nextFloat() - 0.5f) * 2f * animationSpeed,
+            rotSpeed = (Random.nextFloat() - 0.5f) * (1.2f + layer),
             color = color,
-            swingOffset = Random.nextFloat() * Math.PI.toFloat() * 2,
-            swingAmplitude = Random.nextFloat() * 30f + 10f
+            swingOffset = Random.nextFloat() * (Math.PI * 2).toFloat(),
+            swingAmplitude = Random.nextFloat() * 24f + 8f + layer * 6f,
+            layer = layer
         )
     }
 
-    private fun buildHeartPath(cx: Float, cy: Float, size: Float): Path {
-        val path = Path()
-        // 心形贝塞尔曲线
-        path.moveTo(cx, cy + size * 0.3f)
-        path.cubicTo(
-            cx - size * 1.0f, cy - size * 0.2f,
-            cx - size * 1.0f, cy - size * 0.8f,
-            cx, cy - size * 0.4f
-        )
-        path.cubicTo(
-            cx + size * 1.0f, cy - size * 0.8f,
-            cx + size * 1.0f, cy - size * 0.2f,
-            cx, cy + size * 0.3f
-        )
-        path.close()
-        return path
+    private fun buildHeartPath(size: Float): Path {
+        return Path().apply {
+            moveTo(0f, size * 0.3f)
+            cubicTo(-size, -size * 0.2f, -size, -size * 0.85f, 0f, -size * 0.4f)
+            cubicTo(size, -size * 0.85f, size, -size * 0.2f, 0f, size * 0.3f)
+            close()
+        }
     }
 
     override fun onDrawEffect(canvas: Canvas) {
-        // 绘制背景
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), streakPaint)
 
-        // 绘制心形粒子
-        for (heart in hearts) {
-            paint.color = heart.color
-            paint.alpha = heart.alpha
+        hearts.sortedBy { it.layer }.forEach { heart ->
             canvas.save()
             canvas.translate(heart.x, heart.y)
             canvas.rotate(heart.rotation)
-            canvas.drawPath(buildHeartPath(0f, 0f, heart.size), paint)
+
+            val scale = when (heart.layer) {
+                0 -> 0.75f
+                1 -> 1f
+                else -> 1.15f
+            }
+            canvas.scale(scale, scale)
+
+            if (heart.layer == 2) {
+                glowPaint.color = adjustAlpha(primaryColor, (heart.alpha * 0.35f).toInt().coerceAtMost(120))
+                glowPaint.setShadowLayer(18f, 0f, 0f, glowPaint.color)
+                canvas.drawPath(buildHeartPath(heart.size * 1.08f), glowPaint)
+                glowPaint.clearShadowLayer()
+            }
+
+            paint.color = heart.color
+            paint.alpha = heart.alpha
+            paint.style = Paint.Style.FILL
+            canvas.drawPath(buildHeartPath(heart.size), paint)
+
+            paint.color = Color.argb((heart.alpha * 0.22f).toInt(), 255, 255, 255)
+            canvas.drawCircle(-heart.size * 0.24f, -heart.size * 0.22f, heart.size * 0.12f, paint)
+
             canvas.restore()
         }
 
-        // 绘制爱意文字（带对比度保护 + 淡入上浮动画）
         if (message.isNotEmpty()) {
             val centerX = width / 2f
-            val centerY = height * 0.65f + textOffsetY
+            val centerY = height * 0.66f + textOffsetY
 
-            // 淡入上浮动画：前60帧从透明+下移 渐变到 完全显示
+            val glowRadius = 7f + textGlow * 8f
+            textPaint.setShadowLayer(glowRadius, 0f, 0f, textGlowColor())
             textPaint.alpha = (textAlpha * 255).toInt()
-            subTextPaint.alpha = (textAlpha * 255).toInt()
+            subTextPaint.alpha = (textAlpha * 235).toInt()
 
             drawContrastText(canvas, message, centerX, centerY, textPaint, ContrastTextType.MAIN)
-
             if (subMessage.isNotEmpty()) {
-                drawContrastText(canvas, subMessage, centerX, centerY + 48f, subTextPaint, ContrastTextType.SUB)
+                drawContrastText(canvas, subMessage, centerX, centerY + 50f, subTextPaint, ContrastTextType.SUB)
             }
 
-            // 恢复 paint 的 alpha
             textPaint.alpha = 255
             subTextPaint.alpha = 255
         }
@@ -173,32 +217,31 @@ class HeartRainEffect @JvmOverloads constructor(
         val h = height
         if (w == 0 || h == 0) return
 
-        // 淡入上浮动画
         if (frameCount < 90) {
             val progress = (frameCount / 90f).coerceIn(0f, 1f)
-            // easeOutCubic 缓动
             val eased = 1f - (1f - progress) * (1f - progress) * (1f - progress)
             textAlpha = eased
             textOffsetY = 30f * (1f - eased)
         } else {
             textAlpha = 1f
-            textOffsetY = 0f
+            textOffsetY = sin((frameCount - 90) * 0.03f) * 6f
         }
+        textGlow = (sin(frameCount * 0.04f) * 0.5f + 0.5f)
 
-        val targetCount = particleCount.coerceIn(20, 100)
         val toRemove = mutableListOf<Heart>()
-        
-        for (heart in hearts) {
+        hearts.forEach { heart ->
+            val sway = sin(frameCount * (0.02f + heart.layer * 0.007f) + heart.swingOffset)
             heart.y += heart.speed
-            heart.x += sin((frameCount * 0.03f + heart.swingOffset).toDouble()).toFloat() * heart.swingAmplitude * 0.05f
+            heart.x += sway * heart.swingAmplitude * 0.05f
             heart.rotation += heart.rotSpeed
-            if (heart.y > h + heart.size * 2) {
+
+            if (heart.y > h + heart.size * 4f) {
                 toRemove.add(heart)
             }
         }
         hearts.removeAll(toRemove)
 
-        // 补充新粒子
+        val targetCount = particleCount.coerceIn(28, 120)
         while (hearts.size < targetCount) {
             hearts.add(createHeart(w, h, false))
         }

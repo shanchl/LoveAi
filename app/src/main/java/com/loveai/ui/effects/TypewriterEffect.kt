@@ -1,54 +1,93 @@
 package com.loveai.ui.effects
 
 import android.content.Context
-import android.graphics.*
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Shader
+import android.graphics.Typeface
 import android.util.AttributeSet
 import com.loveai.model.Effect
 import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * 效果6：打字机效果
- * 支持多种变体配置（颜色、速度等）
- * 改进版：文字出现后有动态效果，不再闪出
+ * 第三轮精修：把打字机做成“夜里写情书”的感觉，而不是纯文字逐字出现。
  */
 class TypewriterEffect @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
 ) : BaseEffectView(context, attrs) {
 
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private data class Dust(
+        var x: Float,
+        var y: Float,
+        var radius: Float,
+        var alpha: Int,
+        var driftPhase: Float,
+        var driftSpeed: Float
+    )
+
+    private val dusts = mutableListOf<Dust>()
+    private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val panelPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val panelStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val subTextPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val cursorPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val dustPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     private var displayedText = ""
     private var charIndex = 0
     private var frameCount = 0
-    private var cycleCount = 0
     private var showCursor = true
-    
-    // 文字动画状态
-    private var textAnimationState = 0  // 0: 打字中, 1: 完成后展示中(永久)
-    private var displayTimeCounter = 0  // 文字显示计时器
-    private var textYOffset = 0f         // 文字Y轴偏移（用于浮动效果）
-    private var textAlpha = 255         // 文字透明度
-    private var glowIntensity = 0f       // 发光强度
-    private var textScale = 1f          // 文字缩放（用于呼吸效果）
-
-    private var gradientOffset = 0f
-    private val bgPaint = Paint()
-
-    // 文字完成展示后不再重置，一直保持动画效果
-    // 由外部页面切换来结束此特效
+    private var panelAlpha = 0f
+    private var textAlpha = 0f
+    private var floatPhase = 0f
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        updateBackground()
+
+        bgPaint.shader = LinearGradient(
+            0f,
+            0f,
+            w.toFloat(),
+            h.toFloat(),
+            intArrayOf(
+                backgroundColor,
+                adjustAlpha(primaryColor, 16),
+                adjustAlpha(secondaryColor, 24)
+            ),
+            floatArrayOf(0f, 0.48f, 1f),
+            Shader.TileMode.CLAMP
+        )
+
+        dusts.clear()
+        repeat(42) {
+            dusts.add(
+                Dust(
+                    x = Random.nextFloat() * w,
+                    y = Random.nextFloat() * h,
+                    radius = Random.nextFloat() * 2.6f + 0.8f,
+                    alpha = Random.nextInt(18, 90),
+                    driftPhase = Random.nextFloat() * (Math.PI * 2).toFloat(),
+                    driftSpeed = Random.nextFloat() * 0.03f + 0.008f
+                )
+            )
+        }
     }
 
     override fun onEffectBound(effect: Effect) {
+        displayedText = ""
+        charIndex = 0
+        frameCount = 0
+        showCursor = true
+        panelAlpha = 0f
+        textAlpha = 0f
+        floatPhase = 0f
+
         textPaint.apply {
             color = Color.WHITE
             textSize = 48f
@@ -57,7 +96,7 @@ class TypewriterEffect @JvmOverloads constructor(
             setShadowLayer(8f, 0f, 2f, textGlowColor())
         }
         subTextPaint.apply {
-            color = adjustAlpha(primaryColor, 0xFF)
+            color = adjustAlpha(primaryColor, 0xF0)
             textSize = 30f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
             textAlign = Paint.Align.CENTER
@@ -66,144 +105,92 @@ class TypewriterEffect @JvmOverloads constructor(
             color = primaryColor
             strokeWidth = 3f
         }
-        glowPaint.apply {
-            color = primaryColor
-            maskFilter = BlurMaskFilter(30f, BlurMaskFilter.Blur.NORMAL)
-        }
-        
-        // 重置打字机状态
-        displayedText = ""
-        charIndex = 0
-        cycleCount = 0
-        textAnimationState = 0
-        displayTimeCounter = 0
-        textYOffset = 0f
-        textAlpha = 255
-        glowIntensity = 0f
-        textScale = 1f
-    }
-
-    private fun updateBackground() {
-        val colors = intArrayOf(
-            backgroundColor,
-            adjustAlpha(primaryColor, 0x1A),
-            adjustAlpha(secondaryColor, 0x0F)
-        )
-        bgPaint.shader = LinearGradient(
-            0f, 0f, width.toFloat(), height.toFloat(),
-            colors,
-            floatArrayOf(0f, 0.5f, 1f),
-            Shader.TileMode.CLAMP
-        )
     }
 
     override fun onDrawEffect(canvas: Canvas) {
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
 
-        if (message.isNotEmpty()) {
-            val centerX = width / 2f
-            val centerY = height * 0.45f
+        dusts.forEach { dust ->
+            dustPaint.color = Color.argb(dust.alpha, 255, 255, 255)
+            canvas.drawCircle(dust.x, dust.y, dust.radius, dustPaint)
+        }
 
-            // 主文字区域 - 根据状态应用不同动画效果
-            if (displayedText.isNotEmpty()) {
-                val animatedY = centerY + textYOffset
-                
-                // 应用缩放效果（仅在展示状态）
-                if (textAnimationState >= 1 && textScale != 1f) {
-                    canvas.save()
-                    canvas.scale(textScale, textScale, centerX, animatedY)
-                }
-                
-                // 状态1：打字完成后的展示阶段 - 添加发光效果
-                if (textAnimationState >= 1) {
-                    // 绘制发光背景
-                    if (glowIntensity > 0) {
-                        glowPaint.alpha = (glowIntensity * 100).toInt()
-                        val textWidth = textPaint.measureText(displayedText)
-                        canvas.drawText(displayedText, centerX, animatedY, glowPaint)
-                    }
-                    
-                    // 绘制带阴影的文字
-                    textPaint.setShadowLayer(12f + glowIntensity * 8, 0f, 2f, 
-                        Color.argb((glowIntensity * 200).toInt(), 
-                            Color.red(primaryColor), 
-                            Color.green(primaryColor), 
-                            Color.blue(primaryColor)))
-                    textPaint.alpha = textAlpha
-                }
-                
-                drawContrastText(canvas, displayedText, centerX, animatedY, textPaint, ContrastTextType.MAIN)
-                
-                // 恢复画布缩放状态
-                if (textAnimationState >= 1 && textScale != 1f) {
-                    canvas.restore()
-                }
-                
-                // 恢复阴影设置
-                textPaint.setShadowLayer(8f, 0f, 2f, textGlowColor())
-            }
+        val panelRect = RectF(
+            width * 0.1f,
+            height * 0.18f,
+            width * 0.9f,
+            height * 0.74f
+        )
+        panelPaint.color = Color.argb((panelAlpha * 185).toInt(), 14, 14, 24)
+        canvas.drawRoundRect(panelRect, 34f, 34f, panelPaint)
 
-            // 光标 - 打字过程中显示
-            if (textAnimationState == 0 && showCursor && charIndex <= message.length) {
-                val textWidth = textPaint.measureText(displayedText)
-                val startX = centerX - textWidth / 2f + textWidth + 5f
-                cursorPaint.alpha = 255
-                canvas.drawLine(startX, centerY - 35f + textYOffset, startX, centerY + 10f + textYOffset, cursorPaint)
-            }
+        panelStrokePaint.style = Paint.Style.STROKE
+        panelStrokePaint.strokeWidth = 2f
+        panelStrokePaint.color = adjustAlpha(primaryColor, (panelAlpha * 80).toInt())
+        canvas.drawRoundRect(panelRect, 34f, 34f, panelStrokePaint)
 
-            // 副标题淡入 - 在打字完成后显示
-            if (subMessage.isNotEmpty() && charIndex > message.length) {
-                val subAlpha = ((charIndex - message.length) / 10f).coerceIn(0f, 1f)
-                subTextPaint.alpha = (subAlpha * 255).toInt()
-                drawContrastText(canvas, subMessage, centerX, centerY + 65f + textYOffset, subTextPaint, ContrastTextType.SUB)
-            }
+        val titleY = panelRect.top + 72f + sin(floatPhase) * 4f
+        val contentY = panelRect.centerY() - 10f + sin(floatPhase * 0.7f) * 5f
+
+        if (displayedText.isNotEmpty()) {
+            textPaint.alpha = (textAlpha * 255).toInt()
+            drawContrastText(canvas, displayedText, panelRect.centerX(), contentY, textPaint, ContrastTextType.MAIN)
+        }
+
+        if (textAlpha > 0.65f && subMessage.isNotEmpty()) {
+            subTextPaint.alpha = (((textAlpha - 0.65f) / 0.35f).coerceIn(0f, 1f) * 255).toInt()
+            drawContrastText(canvas, subMessage, panelRect.centerX(), contentY + 84f, subTextPaint, ContrastTextType.SUB)
+        }
+
+        textPaint.alpha = ((panelAlpha * 200).toInt()).coerceAtLeast(0)
+        textPaint.textSize = 18f
+        textPaint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        canvas.drawText("写给你的情书", panelRect.centerX(), titleY, textPaint)
+        textPaint.textSize = 48f
+        textPaint.typeface = Typeface.create(Typeface.SERIF, Typeface.ITALIC)
+
+        if (showCursor && charIndex <= message.length) {
+            val textWidth = textPaint.measureText(displayedText)
+            val cursorX = panelRect.centerX() - textWidth / 2f + textWidth + 8f
+            canvas.drawLine(cursorX, contentY - 36f, cursorX, contentY + 10f, cursorPaint)
         }
     }
 
     override fun onUpdateAnimation() {
         frameCount++
+        floatPhase += 0.035f
 
-        // 光标闪烁
-        if (frameCount % 15 == 0) showCursor = !showCursor
-
-        val typeSpeed = (4 / animationSpeed).toInt().coerceIn(2, 8)
-        
-        when (textAnimationState) {
-            0 -> {
-                // 状态0：打字中
-                if (frameCount % typeSpeed == 0) {
-                    if (charIndex <= message.length + 10) {
-                        if (charIndex < message.length) {
-                            displayedText = message.substring(0, charIndex + 1)
-                        }
-                        charIndex++
-                    } else {
-                        // 打字完成，切换到展示状态
-                        textAnimationState = 1
-                        displayTimeCounter = 0
-                    }
-                }
-            }
-            1 -> {
-                // 状态1：文字展示中 - 永久持续动态效果，不再重置
-                displayTimeCounter++
-                
-                // 1. 浮动效果 (正弦波)
-                textYOffset = sin(displayTimeCounter * 0.05f) * 10f
-                
-                // 2. 呼吸发光效果
-                glowIntensity = (sin(displayTimeCounter * 0.03f) + 1f) / 2f
-                
-                // 3. 轻微的透明度呼吸效果
-                textAlpha = (240 + sin(displayTimeCounter * 0.025f) * 15).toInt()
-                
-                // 4. 文字缩放微调效果
-                textScale = 1f + sin(displayTimeCounter * 0.04f) * 0.03f
-                
-                // 状态1永久保持，不再进入状态2重置
-            }
+        if (frameCount % 18 == 0) {
+            showCursor = !showCursor
         }
 
-        gradientOffset += 0.002f
+        if (frameCount < 38) {
+            panelAlpha = (frameCount / 38f).coerceIn(0f, 1f)
+        } else {
+            panelAlpha = 1f
+        }
+
+        val typeSpeed = (4 / animationSpeed).toInt().coerceIn(2, 8)
+        if (frameCount % typeSpeed == 0 && charIndex < message.length) {
+            charIndex++
+            displayedText = message.substring(0, charIndex)
+        }
+
+        val targetAlpha = if (message.isEmpty() || charIndex >= message.length) {
+            1f
+        } else {
+            (charIndex / message.length.toFloat()).coerceIn(0f, 1f)
+        }
+        textAlpha += (targetAlpha - textAlpha) * 0.14f
+
+        dusts.forEach { dust ->
+            dust.y -= 0.18f + dust.radius * 0.03f
+            dust.x += sin(dust.driftPhase) * 0.4f
+            dust.driftPhase += dust.driftSpeed
+            if (dust.y < -10f) {
+                dust.y = height + 10f
+                dust.x = Random.nextFloat() * width
+            }
+        }
     }
 }

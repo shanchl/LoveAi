@@ -1,51 +1,57 @@
 package com.loveai.ui.effects
 
 import android.content.Context
-import android.graphics.*
+import android.graphics.BlurMaskFilter
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.RadialGradient
+import android.graphics.Shader
+import android.graphics.Typeface
 import android.util.AttributeSet
 import com.loveai.model.Effect
-import kotlin.math.*
+import kotlin.math.min
+import kotlin.math.sin
 
 /**
- * 效果7：爱心脉冲效果
- * 支持多种变体配置（颜色、速度等）
+ * 第三轮精修：让心跳页更像“胸腔里的鼓点”，而不是单个心形缩放。
  */
 class HeartPulseEffect @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
 ) : BaseEffectView(context, attrs) {
 
+    private data class PulseRing(
+        var radius: Float,
+        var alpha: Float,
+        var strokeWidth: Float
+    )
+
+    private val pulseRings = mutableListOf<PulseRing>()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val subTextPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     private var frameCount = 0
     private var scale = 1f
-    private var scaleDir = 1f
     private var glowAlpha = 0f
-
-    private val bgPaint = Paint()
-    private val heartPath = Path()
-
-    private data class PulseRing(
-        var radius: Float,
-        var alpha: Float,
-        var maxRadius: Float
-    )
-    private val pulseRings = mutableListOf<PulseRing>()
     private var textAlpha = 0f
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         bgPaint.shader = RadialGradient(
-            w / 2f, h * 0.45f, max(w, h) * 0.8f,
+            w / 2f,
+            h * 0.42f,
+            maxOf(w, h) * 0.82f,
             intArrayOf(
                 backgroundColor,
-                adjustAlpha(primaryColor, 0x1A),
-                adjustAlpha(secondaryColor, 0x0D)
+                adjustAlpha(primaryColor, 22),
+                adjustAlpha(secondaryColor, 10)
             ),
-            null,
+            floatArrayOf(0f, 0.4f, 1f),
             Shader.TileMode.CLAMP
         )
     }
@@ -53,10 +59,10 @@ class HeartPulseEffect @JvmOverloads constructor(
     override fun onEffectBound(effect: Effect) {
         frameCount = 0
         scale = 1f
-        scaleDir = 1f
         glowAlpha = 0f
         textAlpha = 0f
         pulseRings.clear()
+
         textPaint.apply {
             color = Color.WHITE
             textSize = 40f
@@ -74,12 +80,12 @@ class HeartPulseEffect @JvmOverloads constructor(
     }
 
     private fun buildHeartPath(cx: Float, cy: Float, size: Float): Path {
-        val path = Path()
-        path.moveTo(cx, cy + size * 0.3f)
-        path.cubicTo(cx - size * 1.0f, cy - size * 0.2f, cx - size * 1.0f, cy - size * 0.8f, cx, cy - size * 0.4f)
-        path.cubicTo(cx + size * 1.0f, cy - size * 0.8f, cx + size * 1.0f, cy - size * 0.2f, cx, cy + size * 0.3f)
-        path.close()
-        return path
+        return Path().apply {
+            moveTo(cx, cy + size * 0.3f)
+            cubicTo(cx - size, cy - size * 0.2f, cx - size, cy - size * 0.8f, cx, cy - size * 0.4f)
+            cubicTo(cx + size, cy - size * 0.8f, cx + size, cy - size * 0.2f, cx, cy + size * 0.3f)
+            close()
+        }
     }
 
     override fun onDrawEffect(canvas: Canvas) {
@@ -89,89 +95,79 @@ class HeartPulseEffect @JvmOverloads constructor(
         val centerY = height * 0.4f
         val baseSize = min(width, height) * 0.18f
 
-        // 绘制脉冲环
-        for (ring in pulseRings) {
+        pulseRings.forEach { ring ->
             glowPaint.color = primaryColor
-            glowPaint.alpha = (ring.alpha * 100).toInt().coerceIn(0, 255)
+            glowPaint.alpha = (ring.alpha * 125).toInt().coerceIn(0, 255)
             glowPaint.style = Paint.Style.STROKE
-            glowPaint.strokeWidth = 3f
-            glowPaint.maskFilter = BlurMaskFilter(20f, BlurMaskFilter.Blur.NORMAL)
+            glowPaint.strokeWidth = ring.strokeWidth
+            glowPaint.maskFilter = BlurMaskFilter(16f, BlurMaskFilter.Blur.NORMAL)
             canvas.drawCircle(centerX, centerY, ring.radius, glowPaint)
         }
         glowPaint.maskFilter = null
 
-        // 绘制外发光
-        glowPaint.color = primaryColor
-        glowPaint.alpha = (glowAlpha * 80).toInt().coerceIn(0, 255)
+        glowPaint.color = adjustAlpha(primaryColor, (glowAlpha * 90).toInt())
         glowPaint.style = Paint.Style.FILL
-        glowPaint.maskFilter = BlurMaskFilter(60f, BlurMaskFilter.Blur.NORMAL)
+        glowPaint.maskFilter = BlurMaskFilter(72f, BlurMaskFilter.Blur.NORMAL)
         canvas.drawPath(buildHeartPath(centerX, centerY, baseSize * scale * 1.2f), glowPaint)
         glowPaint.maskFilter = null
 
-        // 绘制主爱心
+        paint.color = secondaryColor
+        paint.alpha = 90
+        canvas.drawPath(buildHeartPath(centerX, centerY, baseSize * scale * 1.08f), paint)
+
         paint.color = primaryColor
-        paint.style = Paint.Style.FILL
+        paint.alpha = 255
         canvas.drawPath(buildHeartPath(centerX, centerY, baseSize * scale), paint)
 
-        // 绘制爱心高光
-        paint.color = secondaryColor
-        paint.alpha = 120
-        val highlightSize = baseSize * scale * 0.3f
-        canvas.drawCircle(centerX - baseSize * scale * 0.3f, centerY - baseSize * scale * 0.25f, highlightSize * 0.4f, paint)
+        paint.color = Color.argb(135, 255, 255, 255)
+        canvas.drawCircle(centerX - baseSize * 0.22f, centerY - baseSize * 0.18f, baseSize * 0.11f, paint)
 
         if (message.isNotEmpty()) {
-            // 文字随心跳脉动缩放
-            val textScaleVal = 1f + (scale - 1f) * 0.3f  // 跟随心跳，幅度减小
-            val centerX = width / 2f
-            val centerY = height * 0.62f
+            val textScaleVal = 1f + (scale - 1f) * 0.24f
+            val messageY = height * 0.62f + sin(frameCount * 0.03f) * 4f
 
             canvas.save()
-            canvas.translate(centerX, centerY)
-            canvas.scale(textScaleVal, textScaleVal)
-            canvas.translate(-centerX, -centerY)
-
+            canvas.scale(textScaleVal, textScaleVal, centerX, messageY)
             textPaint.alpha = (textAlpha * 255).toInt()
-            subTextPaint.alpha = (textAlpha * 255).toInt()
-
-            drawContrastText(canvas, message, centerX, centerY, textPaint, ContrastTextType.MAIN)
+            subTextPaint.alpha = (textAlpha * 235).toInt()
+            drawContrastText(canvas, message, centerX, messageY, textPaint, ContrastTextType.MAIN)
             if (subMessage.isNotEmpty()) {
-                drawContrastText(canvas, subMessage, centerX, centerY + 44f, subTextPaint, ContrastTextType.SUB)
+                drawContrastText(canvas, subMessage, centerX, messageY + 44f, subTextPaint, ContrastTextType.SUB)
             }
+            canvas.restore()
 
             textPaint.alpha = 255
             subTextPaint.alpha = 255
-            canvas.restore()
         }
     }
 
     override fun onUpdateAnimation() {
         frameCount++
 
-        // 文字淡入（前 50 帧）
-        if (frameCount < 50) {
-            textAlpha = (frameCount / 50f).coerceIn(0f, 1f)
-        } else {
-            textAlpha = 1f
+        textAlpha = (frameCount / 55f).coerceIn(0f, 1f)
+
+        val beat = sin(frameCount * 0.14f)
+        val accent = sin(frameCount * 0.28f).coerceAtLeast(0f)
+        scale = 1f + beat.coerceAtLeast(0f) * 0.08f + accent * 0.05f
+        glowAlpha = (sin(frameCount * 0.08f) * 0.5f + 0.5f)
+
+        if (frameCount % 18 == 0) {
+            pulseRings.add(
+                PulseRing(
+                    radius = min(width, height) * 0.14f,
+                    alpha = 1f,
+                    strokeWidth = 4.2f
+                )
+            )
         }
 
-        // 爱心脉冲缩放 - 使用变体速度
-        scale += scaleDir * 0.012f * animationSpeed
-        if (scale > 1.15f) {
-            scaleDir = -1f
-            pulseRings.add(PulseRing(radius = min(width, height) * 0.18f, alpha = 1f, maxRadius = min(width, height) * 0.6f))
-        }
-        if (scale < 0.85f) {
-            scaleDir = 1f
-            pulseRings.add(PulseRing(radius = min(width, height) * 0.18f, alpha = 1f, maxRadius = min(width, height) * 0.6f))
-        }
-
-        glowAlpha = (sin(frameCount * 0.08f) + 1f) / 2f
-
+        val maxRadius = min(width, height) * 0.62f
         val toRemove = mutableListOf<PulseRing>()
-        for (ring in pulseRings) {
-            ring.radius += 3f * animationSpeed
-            ring.alpha -= 0.015f
-            if (ring.alpha <= 0 || ring.radius > ring.maxRadius) {
+        pulseRings.forEach { ring ->
+            ring.radius += 4.2f * animationSpeed
+            ring.alpha -= 0.022f
+            ring.strokeWidth = 5f * ring.alpha.coerceAtLeast(0.2f)
+            if (ring.alpha <= 0f || ring.radius > maxRadius) {
                 toRemove.add(ring)
             }
         }

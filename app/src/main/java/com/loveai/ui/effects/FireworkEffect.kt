@@ -1,15 +1,21 @@
 package com.loveai.ui.effects
 
 import android.content.Context
-import android.graphics.*
+import android.graphics.BlurMaskFilter
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.Shader
+import android.graphics.Typeface
 import android.util.AttributeSet
 import com.loveai.model.Effect
-import kotlin.math.*
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * 效果2：烟花绽放效果
- * 支持多种变体配置（颜色、数量等）
+ * 第三轮精修：加入升空拖尾、二次爆闪和残留火星，让烟花更像演出而不是粒子散开。
  */
 class FireworkEffect @JvmOverloads constructor(
     context: Context,
@@ -28,6 +34,12 @@ class FireworkEffect @JvmOverloads constructor(
         var maxLife: Float
     )
 
+    private data class BurstRing(
+        var radius: Float,
+        var alpha: Float,
+        val color: Int
+    )
+
     private data class Firework(
         var x: Float,
         var y: Float,
@@ -35,36 +47,59 @@ class FireworkEffect @JvmOverloads constructor(
         var vy: Float,
         var color: Int,
         var exploded: Boolean = false,
-        var particles: MutableList<Particle> = mutableListOf()
+        val particles: MutableList<Particle> = mutableListOf(),
+        val rings: MutableList<BurstRing> = mutableListOf()
     )
 
     private val fireworks = mutableListOf<Firework>()
+    private val stars = mutableListOf<Pair<Float, Float>>()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val subTextPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+
     private var frameCount = 0
-    private val bgPaint = Paint()
     private var textAlpha = 0f
-    private var textScale = 0.6f
+    private var textScale = 0.75f
     private var glowPhase = 0f
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        bgPaint.color = backgroundColor
+
+        bgPaint.shader = LinearGradient(
+            0f,
+            0f,
+            0f,
+            h.toFloat(),
+            intArrayOf(
+                Color.parseColor("#120812"),
+                adjustAlpha(primaryColor, 18),
+                backgroundColor
+            ),
+            floatArrayOf(0f, 0.28f, 1f),
+            Shader.TileMode.CLAMP
+        )
+
+        stars.clear()
+        repeat(36) {
+            stars.add(Random.nextFloat() * w to Random.nextFloat() * h * 0.45f)
+        }
     }
 
     override fun onEffectBound(effect: Effect) {
         fireworks.clear()
         frameCount = 0
         textAlpha = 0f
-        textScale = 0.6f
+        textScale = 0.75f
         glowPhase = 0f
+
         textPaint.apply {
             color = Color.WHITE
             textSize = 48f
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
             textAlign = Paint.Align.CENTER
-            setShadowLayer(10f, 0f, 0f, textGlowColor())
+            setShadowLayer(12f, 0f, 0f, textGlowColor())
         }
         subTextPaint.apply {
             color = adjustAlpha(secondaryColor, 0xFF)
@@ -74,104 +109,114 @@ class FireworkEffect @JvmOverloads constructor(
         }
     }
 
-    private fun generateVariantColor(): Int {
-        // 基于主色调生成变体颜色
-        return if (Random.nextBoolean()) {
-            primaryColor
-        } else {
-            secondaryColor
-        }
+    private fun variantColor(): Int {
+        return if (Random.nextBoolean()) primaryColor else secondaryColor
     }
 
     private fun launchFirework() {
         if (width == 0 || height == 0) return
-        val color = generateVariantColor()
         fireworks.add(
             Firework(
-                x = Random.nextFloat() * width * 0.8f + width * 0.1f,
-                y = height.toFloat(),
-                targetY = Random.nextFloat() * height * 0.5f + height * 0.1f,
-                vy = -(Random.nextFloat() * 12f + 10f) * animationSpeed,
-                color = color
+                x = Random.nextFloat() * width * 0.7f + width * 0.15f,
+                y = height.toFloat() + 40f,
+                targetY = Random.nextFloat() * height * 0.35f + height * 0.12f,
+                vy = -(Random.nextFloat() * 10f + 12f) * animationSpeed,
+                color = variantColor()
             )
         )
     }
 
-    private fun explodeFirework(fw: Firework) {
-        val count = particleCount.coerceIn(40, 120)
+    private fun explodeFirework(firework: Firework) {
+        val count = particleCount.coerceIn(44, 140)
         repeat(count) {
-            val angle = Random.nextFloat() * Math.PI.toFloat() * 2
-            val speed = Random.nextFloat() * 8f + 2f
-            val life = Random.nextFloat() * 60f + 40f
-            fw.particles.add(
+            val angle = Random.nextFloat() * (Math.PI * 2).toFloat()
+            val speed = Random.nextFloat() * 7.5f + 2.5f
+            val life = Random.nextFloat() * 54f + 42f
+            firework.particles.add(
                 Particle(
-                    x = fw.x,
-                    y = fw.y,
+                    x = firework.x,
+                    y = firework.y,
                     vx = cos(angle) * speed * animationSpeed,
                     vy = sin(angle) * speed * animationSpeed,
-                    color = fw.color,
+                    color = firework.color,
                     alpha = 1f,
-                    size = Random.nextFloat() * 4f + 2f,
+                    size = Random.nextFloat() * 4.5f + 1.6f,
                     life = life,
                     maxLife = life
                 )
             )
         }
-        fw.exploded = true
+
+        firework.rings.add(BurstRing(radius = 0f, alpha = 1f, color = firework.color))
+        firework.rings.add(BurstRing(radius = 12f, alpha = 0.8f, color = Color.WHITE))
+        firework.exploded = true
     }
 
     override fun onDrawEffect(canvas: Canvas) {
-        // 深色背景（带残影效果）
-        paint.color = adjustAlpha(backgroundColor, 0x1A)
-        paint.alpha = 30
-        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
-        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint.also { it.alpha = 200 })
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
 
-        // 绘制烟花和粒子
-        for (fw in fireworks) {
+        stars.forEach { (x, y) ->
+            val alpha = ((sin(frameCount * 0.03f + x * 0.01f) * 0.5f + 0.5f) * 130).toInt() + 30
+            paint.color = Color.argb(alpha, 255, 255, 255)
+            canvas.drawCircle(x, y, 1.4f, paint)
+        }
+
+        fireworks.forEach { fw ->
             if (!fw.exploded) {
-                // 绘制上升中的烟花
+                glowPaint.color = adjustAlpha(fw.color, 140)
+                glowPaint.maskFilter = BlurMaskFilter(16f, BlurMaskFilter.Blur.NORMAL)
+                canvas.drawCircle(fw.x, fw.y, 5.5f, glowPaint)
+                glowPaint.maskFilter = null
+
                 paint.color = fw.color
-                paint.alpha = 255
+                paint.strokeWidth = 2.4f
+                paint.style = Paint.Style.STROKE
+                canvas.drawLine(fw.x, fw.y, fw.x, fw.y + 36f, paint)
                 paint.style = Paint.Style.FILL
-                canvas.drawCircle(fw.x, fw.y, 4f, paint)
+                canvas.drawCircle(fw.x, fw.y, 3.6f, paint)
             } else {
-                // 绘制爆炸粒子
-                for (p in fw.particles) {
-                    if (p.life <= 0) continue
+                fw.rings.forEach { ring ->
+                    paint.color = ring.color
+                    paint.alpha = (ring.alpha * 180).toInt().coerceIn(0, 255)
+                    paint.style = Paint.Style.STROKE
+                    paint.strokeWidth = 2.8f
+                    canvas.drawCircle(fw.x, fw.y, ring.radius, paint)
+                }
+
+                fw.particles.forEach { p ->
+                    if (p.life <= 0f) return@forEach
+                    glowPaint.color = adjustAlpha(p.color, (p.alpha * 120).toInt().coerceAtMost(120))
+                    glowPaint.maskFilter = BlurMaskFilter(p.size * 3f, BlurMaskFilter.Blur.NORMAL)
+                    canvas.drawCircle(p.x, p.y, p.size * 1.6f, glowPaint)
+                    glowPaint.maskFilter = null
+
                     paint.color = p.color
                     paint.alpha = (p.alpha * 255).toInt().coerceIn(0, 255)
                     paint.style = Paint.Style.FILL
-                    canvas.drawCircle(p.x, p.y, p.size * (p.life / p.maxLife), paint)
+                    canvas.drawCircle(p.x, p.y, p.size * (p.life / p.maxLife).coerceAtLeast(0.35f), paint)
                 }
             }
         }
 
-        // 绘制爱意文字（带对比度保护 + 缩放弹入 + 呼吸发光）
         if (message.isNotEmpty()) {
             val centerX = width / 2f
-            val centerY = height * 0.68f
+            val centerY = height * 0.69f
 
-            // 应用缩放 + 呼吸发光效果
             canvas.save()
-            canvas.translate(centerX, centerY)
-            canvas.scale(textScale, textScale)
-            canvas.translate(-centerX, -centerY)
-
-            // 呼吸发光 - 动态调整 shadowLayer
-            val glowIntensity = (sin(glowPhase) * 0.5f + 0.5f) * 12f + 4f
-            textPaint.setShadowLayer(glowIntensity, 0f, 0f, textGlowColor())
+            canvas.scale(textScale, textScale, centerX, centerY)
+            val glow = (sin(glowPhase) * 0.5f + 0.5f) * 14f + 6f
+            textPaint.setShadowLayer(glow, 0f, 0f, textGlowColor())
             textPaint.alpha = (textAlpha * 255).toInt()
-            subTextPaint.alpha = (textAlpha * 255).toInt()
+            subTextPaint.alpha = (textAlpha * 240).toInt()
 
             drawContrastText(canvas, message, centerX, centerY, textPaint, ContrastTextType.MAIN)
             if (subMessage.isNotEmpty()) {
                 drawContrastText(canvas, subMessage, centerX, centerY + 48f, subTextPaint, ContrastTextType.SUB)
             }
+            canvas.restore()
 
             textPaint.alpha = 255
             subTextPaint.alpha = 255
-            canvas.restore()
         }
     }
 
@@ -179,51 +224,54 @@ class FireworkEffect @JvmOverloads constructor(
         frameCount++
         if (width == 0 || height == 0) return
 
-        // 缩放弹入动画（前 40 帧）
-        if (frameCount < 40) {
-            val progress = (frameCount / 40f).coerceIn(0f, 1f)
-            // easeOutBack 弹性缓动
+        if (frameCount < 52) {
+            val progress = (frameCount / 52f).coerceIn(0f, 1f)
             val t = progress - 1f
-            val eased = t * t * ((1.7f + 1f) * t + 1.7f) + 1f
-            textScale = 0.6f + 0.4f * eased
-            textAlpha = (progress * 1.5f).coerceIn(0f, 1f)
+            val eased = t * t * ((1.8f + 1f) * t + 1.8f) + 1f
+            textScale = 0.75f + 0.25f * eased
+            textAlpha = (progress * 1.3f).coerceIn(0f, 1f)
         } else {
-            textScale = 1f
+            textScale = 1f + sin((frameCount - 52) * 0.025f) * 0.02f
             textAlpha = 1f
         }
-        // 呼吸发光相位
         glowPhase += 0.04f
 
-        val maxFireworks = (particleCount / 15).coerceIn(3, 8)
-        
-        // 定期发射烟花
-        val launchInterval = (40 / animationSpeed).toInt().coerceIn(20, 60)
+        val maxFireworks = (particleCount / 15).coerceIn(3, 9)
+        val launchInterval = (36 / animationSpeed).toInt().coerceIn(18, 52)
         if (frameCount % launchInterval == 0 && fireworks.size < maxFireworks) {
             launchFirework()
         }
 
         val toRemove = mutableListOf<Firework>()
-        for (fw in fireworks) {
+        fireworks.forEach { fw ->
             if (!fw.exploded) {
                 fw.y += fw.vy
                 if (fw.y <= fw.targetY) {
                     explodeFirework(fw)
                 }
             } else {
-                // 更新粒子
+                fw.rings.forEach { ring ->
+                    ring.radius += 4.2f * animationSpeed
+                    ring.alpha -= 0.03f
+                }
+
                 var allDead = true
-                for (p in fw.particles) {
-                    if (p.life <= 0) continue
+                fw.particles.forEach { p ->
+                    if (p.life <= 0f) return@forEach
                     allDead = false
                     p.x += p.vx
                     p.y += p.vy
-                    p.vy += 0.15f // 重力
-                    p.vx *= 0.98f // 空气阻力
-                    p.vy *= 0.98f
+                    p.vy += 0.12f
+                    p.vx *= 0.985f
+                    p.vy *= 0.985f
                     p.life -= 1f
                     p.alpha = p.life / p.maxLife
                 }
-                if (allDead) toRemove.add(fw)
+
+                fw.rings.removeAll { it.alpha <= 0f }
+                if (allDead && fw.rings.isEmpty()) {
+                    toRemove.add(fw)
+                }
             }
         }
         fireworks.removeAll(toRemove)

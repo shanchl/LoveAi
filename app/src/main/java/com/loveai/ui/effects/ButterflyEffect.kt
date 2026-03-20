@@ -1,17 +1,24 @@
 package com.loveai.ui.effects
 
 import android.content.Context
-import android.graphics.*
+import android.graphics.BlurMaskFilter
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.Shader
+import android.graphics.Typeface
 import android.util.AttributeSet
 import com.loveai.model.Effect
-import kotlin.math.*
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.exp
+import kotlin.math.max
+import kotlin.math.sin
+import kotlin.math.sqrt
 import kotlin.random.Random
 
-/**
- * 效果11：蝴蝶飞舞动画
- * 蝴蝶在屏幕中优雅飞翔，翅膀扇动，轨迹呈8字花形
- * 文字展示：缩放弹入效果
- */
 class ButterflyEffect @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
@@ -20,275 +27,284 @@ class ButterflyEffect @JvmOverloads constructor(
     private data class Butterfly(
         var x: Float,
         var y: Float,
-        var vx: Float,           // 速度X
-        var vy: Float,           // 速度Y
-        var wingPhase: Float,    // 翅膀扇动相位
-        val wingSpeed: Float,    // 翅膀扇动速度
-        val size: Float,         // 蝴蝶大小
-        val color1: Int,         // 翅膀主色
-        val color2: Int,         // 翅膀次色
-        var alpha: Int,
-        var wanderPhase: Float,  // 漫游相位（控制飞行轨迹曲线）
-        val wanderRadius: Float, // 漫游半径
-        var targetX: Float,      // 目标方向
+        var vx: Float,
+        var vy: Float,
+        var wingPhase: Float,
+        val wingSpeed: Float,
+        val size: Float,
+        val colorA: Int,
+        val colorB: Int,
+        val layer: Int,
+        var targetX: Float,
         var targetY: Float,
-        var framesSinceTarget: Int  // 多少帧后换目标
+        var phase: Float,
+        var targetTimer: Int
     )
 
-    private data class Petal(
+    private data class Flower(
         val x: Float,
         val y: Float,
-        val size: Float,
+        val radius: Float,
+        val petals: Int,
         val color: Int,
-        val rotation: Float
+        val rotation: Float,
+        val alpha: Int
     )
 
     private val butterflies = mutableListOf<Butterfly>()
-    private val petals = mutableListOf<Petal>()
+    private val flowers = mutableListOf<Flower>()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val subTextPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val bgPaint = Paint()
-    private var frameCount = 0
-    private var textScale = 0.3f
-    private var textAlpha = 0f
-    // 路径缓存，避免每帧 new
+    private val backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val hazePaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val wingPath = Path()
+    private var frameCount = 0
+    private var textScale = 0.72f
+    private var textAlpha = 0f
+    private var textFloat = 0f
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
+        if (w == 0 || h == 0) return
 
-        // 柔美花园背景渐变
-        bgPaint.shader = LinearGradient(
-            0f, 0f, 0f, h.toFloat(),
+        backgroundPaint.shader = LinearGradient(
+            0f,
+            0f,
+            w.toFloat(),
+            h.toFloat(),
             intArrayOf(
-                Color.parseColor("#1A2A1A"),  // 深绿顶部
-                adjustAlpha(primaryColor, 0x12),
-                Color.parseColor("#0D0A12")   // 深紫底部
+                Color.parseColor("#1A281C"),
+                adjustAlpha(primaryColor, 40),
+                adjustAlpha(secondaryColor, 34),
+                Color.parseColor("#100C18")
             ),
-            floatArrayOf(0f, 0.5f, 1f),
+            floatArrayOf(0f, 0.32f, 0.68f, 1f),
             Shader.TileMode.CLAMP
         )
 
-        // 初始化背景花瓣装饰
-        petals.clear()
-        val petalColors = intArrayOf(primaryColor, secondaryColor,
-            Color.parseColor("#FFB6C1"), Color.parseColor("#E8D5E8"))
-        repeat(30) {
-            petals.add(
-                Petal(
-                    x = Random.nextFloat() * w,
-                    y = Random.nextFloat() * h,
-                    size = Random.nextFloat() * 12f + 4f,
-                    color = petalColors[Random.nextInt(petalColors.size)],
-                    rotation = Random.nextFloat() * 360f
-                )
+        flowers.clear()
+        repeat(20) {
+            flowers += Flower(
+                x = Random.nextFloat() * w,
+                y = h * (0.52f + Random.nextFloat() * 0.44f),
+                radius = Random.nextFloat() * 16f + 10f,
+                petals = Random.nextInt(4, 7),
+                color = if (Random.nextBoolean()) primaryColor else secondaryColor,
+                rotation = Random.nextFloat() * 360f,
+                alpha = Random.nextInt(34, 85)
             )
         }
 
-        // 初始化蝴蝶
         butterflies.clear()
-        val count = (particleCount / 8).coerceIn(4, 12)
-        repeat(count) {
-            butterflies.add(createButterfly(w, h))
+        repeat((particleCount / 8).coerceIn(5, 12)) {
+            butterflies += createButterfly(w, h)
         }
     }
 
     override fun onEffectBound(effect: Effect) {
         frameCount = 0
-        textScale = 0.3f
+        textScale = 0.72f
         textAlpha = 0f
+        textFloat = 0f
         textPaint.apply {
             color = Color.WHITE
             textSize = 46f
-            typeface = Typeface.create(Typeface.SERIF, Typeface.ITALIC)
+            typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD_ITALIC)
             textAlign = Paint.Align.CENTER
-            setShadowLayer(10f, 0f, 2f, textGlowColor())
+            setShadowLayer(12f, 0f, 2f, textGlowColor())
         }
         subTextPaint.apply {
-            color = adjustAlpha(secondaryColor, 0xDD)
+            color = adjustAlpha(Color.WHITE, 235)
             textSize = 28f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
             textAlign = Paint.Align.CENTER
         }
     }
 
     private fun createButterfly(w: Int, h: Int): Butterfly {
-        val size = Random.nextFloat() * 20f + 14f
-        val hue = Random.nextFloat() * 60f  // 色相偏移
-        // 基于主/次色生成蝴蝶颜色
-        val baseHsv = FloatArray(3)
-        Color.colorToHSV(primaryColor, baseHsv)
-        baseHsv[0] = (baseHsv[0] + hue) % 360f
-        val c1 = Color.HSVToColor(baseHsv)
-        Color.colorToHSV(secondaryColor, baseHsv)
-        baseHsv[0] = (baseHsv[0] + hue * 0.5f) % 360f
-        val c2 = Color.HSVToColor(baseHsv)
-
-        val tx = Random.nextFloat() * w
-        val ty = Random.nextFloat() * h
+        val layer = Random.nextInt(0, 3)
+        val size = when (layer) {
+            0 -> Random.nextFloat() * 10f + 14f
+            1 -> Random.nextFloat() * 14f + 20f
+            else -> Random.nextFloat() * 16f + 28f
+        }
+        val targetX = Random.nextFloat() * w
+        val targetY = h * (0.14f + Random.nextFloat() * 0.6f)
         return Butterfly(
             x = Random.nextFloat() * w,
-            y = Random.nextFloat() * h,
-            vx = (Random.nextFloat() - 0.5f) * 2f,
-            vy = (Random.nextFloat() - 0.5f) * 2f,
-            wingPhase = Random.nextFloat() * Math.PI.toFloat() * 2,
-            wingSpeed = Random.nextFloat() * 0.15f + 0.1f,
+            y = Random.nextFloat() * h * 0.7f,
+            vx = (Random.nextFloat() - 0.5f) * 2.2f,
+            vy = (Random.nextFloat() - 0.5f) * 1.6f,
+            wingPhase = Random.nextFloat() * Math.PI.toFloat() * 2f,
+            wingSpeed = Random.nextFloat() * 0.18f + 0.12f + layer * 0.02f,
             size = size,
-            color1 = c1,
-            color2 = c2,
-            alpha = Random.nextInt(160, 240),
-            wanderPhase = Random.nextFloat() * Math.PI.toFloat() * 2,
-            wanderRadius = Random.nextFloat() * 80f + 40f,
-            targetX = tx,
-            targetY = ty,
-            framesSinceTarget = Random.nextInt(0, 120)
+            colorA = shiftColor(primaryColor, Random.nextInt(-16, 20)),
+            colorB = shiftColor(secondaryColor, Random.nextInt(-12, 24)),
+            layer = layer,
+            targetX = targetX,
+            targetY = targetY,
+            phase = Random.nextFloat() * Math.PI.toFloat() * 2f,
+            targetTimer = Random.nextInt(40, 120)
         )
     }
 
-    /**
-     * 绘制单只蝴蝶（由两对翅膀组成）
-     */
-    private fun drawButterfly(canvas: Canvas, bf: Butterfly) {
+    private fun shiftColor(color: Int, delta: Int): Int {
+        return Color.argb(
+            255,
+            (Color.red(color) + delta).coerceIn(0, 255),
+            (Color.green(color) + delta / 2).coerceIn(0, 255),
+            (Color.blue(color) + delta).coerceIn(0, 255)
+        )
+    }
+
+    private fun drawFlower(canvas: Canvas, flower: Flower) {
         canvas.save()
-        canvas.translate(bf.x, bf.y)
+        canvas.translate(flower.x, flower.y)
+        canvas.rotate(flower.rotation)
 
-        // 翅膀扇动角度：用正弦波模拟
-        val wingAngle = sin(bf.wingPhase) * 40f  // 最大40度扇动
+        val petalPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = adjustAlpha(flower.color, flower.alpha)
+            style = Paint.Style.FILL
+        }
 
-        // 计算方向（朝向运动方向旋转蝴蝶）
-        val dir = atan2(bf.vy, bf.vx) * (180f / Math.PI.toFloat())
-        canvas.rotate(dir + 90f)  // +90 让蝴蝶朝上
-
-        val alphaFactor = bf.alpha
-        val s = bf.size
-
-        // 上翅（较大）
-        drawWingPair(canvas, bf, s * 1.2f, s * 0.9f, wingAngle, alphaFactor, isUpper = true)
-        // 下翅（较小）
-        drawWingPair(canvas, bf, s * 0.8f, s * 0.6f, wingAngle * 0.85f, alphaFactor, isUpper = false)
-
-        // 身体（椭圆）
-        paint.shader = null
-        paint.style = Paint.Style.FILL
-        paint.color = Color.argb((alphaFactor * 0.9f).toInt(), 40, 20, 10)
-        canvas.drawOval(-s * 0.08f, -s * 0.7f, s * 0.08f, s * 0.7f, paint)
-
-        // 触角
-        paint.color = Color.argb(alphaFactor, 60, 40, 20)
-        paint.strokeWidth = 1.5f
-        paint.style = Paint.Style.STROKE
-        canvas.drawLine(-s * 0.05f, -s * 0.65f, -s * 0.25f, -s * 1.1f, paint)
-        canvas.drawLine(s * 0.05f, -s * 0.65f, s * 0.25f, -s * 1.1f, paint)
-        // 触角顶端小球
-        paint.style = Paint.Style.FILL
-        paint.color = Color.argb(alphaFactor, 80, 50, 30)
-        canvas.drawCircle(-s * 0.25f, -s * 1.1f, s * 0.06f, paint)
-        canvas.drawCircle(s * 0.25f, -s * 1.1f, s * 0.06f, paint)
-
-        canvas.restore()
-    }
-
-    private fun drawWingPair(
-        canvas: Canvas, bf: Butterfly,
-        wingW: Float, wingH: Float,
-        wingAngle: Float, alpha: Int,
-        isUpper: Boolean
-    ) {
-        val yOffset = if (isUpper) -wingH * 0.1f else wingH * 0.55f
-
-        // 左翅
-        canvas.save()
-        canvas.translate(-wingW * 0.05f, yOffset)
-        canvas.rotate(-wingAngle)
-        drawSingleWing(canvas, bf, wingW, wingH, alpha, isLeft = true)
-        canvas.restore()
-
-        // 右翅（镜像）
-        canvas.save()
-        canvas.translate(wingW * 0.05f, yOffset)
-        canvas.rotate(wingAngle)
-        canvas.scale(-1f, 1f)
-        drawSingleWing(canvas, bf, wingW, wingH, alpha, isLeft = false)
-        canvas.restore()
-    }
-
-    private fun drawSingleWing(
-        canvas: Canvas, bf: Butterfly,
-        w: Float, h: Float, alpha: Int, isLeft: Boolean
-    ) {
-        wingPath.reset()
-        // 翅膀形状（贝塞尔曲线模拟）
-        wingPath.moveTo(0f, 0f)
-        wingPath.cubicTo(
-            -w * 0.3f, -h * 0.3f,
-            -w * 1.1f, -h * 0.2f,
-            -w * 0.9f, h * 0.4f
-        )
-        wingPath.cubicTo(
-            -w * 0.7f, h * 0.9f,
-            -w * 0.2f, h * 0.6f,
-            0f, 0f
-        )
-        wingPath.close()
-
-        // 翅膀渐变（主色到次色）
-        val gradient = LinearGradient(
-            -w, -h * 0.3f, 0f, h * 0.5f,
-            intArrayOf(
-                Color.argb(alpha, Color.red(bf.color1), Color.green(bf.color1), Color.blue(bf.color1)),
-                Color.argb((alpha * 0.7f).toInt(), Color.red(bf.color2), Color.green(bf.color2), Color.blue(bf.color2))
-            ),
-            null, Shader.TileMode.CLAMP
-        )
-        paint.shader = gradient
-        paint.style = Paint.Style.FILL
-        canvas.drawPath(wingPath, paint)
-
-        // 翅膀纹路（半透明深色线条）
-        paint.shader = null
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = max(0.8f, w * 0.02f)
-        paint.color = Color.argb((alpha * 0.3f).toInt(), 20, 10, 5)
-        canvas.drawPath(wingPath, paint)
-
-        // 中心纹脉
-        paint.color = Color.argb((alpha * 0.25f).toInt(), 0, 0, 0)
-        paint.strokeWidth = 1f
-        canvas.drawLine(0f, 0f, -w * 0.7f, h * 0.3f, paint)
-        canvas.drawLine(0f, 0f, -w * 0.8f, -h * 0.1f, paint)
-    }
-
-    override fun onDrawEffect(canvas: Canvas) {
-        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
-
-        // 背景花瓣装饰（静态）
-        for (petal in petals) {
-            paint.shader = null
-            paint.style = Paint.Style.FILL
-            paint.color = adjustAlpha(petal.color, 0x30)
+        repeat(flower.petals) { index ->
             canvas.save()
-            canvas.translate(petal.x, petal.y)
-            canvas.rotate(petal.rotation)
-            // 简单椭圆模拟花瓣
-            canvas.drawOval(-petal.size, -petal.size * 0.5f, petal.size, petal.size * 0.5f, paint)
+            canvas.rotate(index * (360f / flower.petals))
+            canvas.drawOval(
+                -flower.radius * 0.32f,
+                -flower.radius,
+                flower.radius * 0.32f,
+                0f,
+                petalPaint
+            )
             canvas.restore()
         }
 
-        // 蝴蝶
-        for (bf in butterflies) {
-            drawButterfly(canvas, bf)
+        petalPaint.color = adjustAlpha(Color.WHITE, (flower.alpha * 1.3f).toInt().coerceAtMost(180))
+        canvas.drawCircle(0f, 0f, flower.radius * 0.24f, petalPaint)
+        canvas.restore()
+    }
+
+    private fun drawWing(canvas: Canvas, width: Float, height: Float, colorA: Int, colorB: Int, alpha: Int) {
+        wingPath.reset()
+        wingPath.moveTo(0f, 0f)
+        wingPath.cubicTo(-width * 0.22f, -height * 0.2f, -width, -height * 0.14f, -width * 0.88f, height * 0.38f)
+        wingPath.cubicTo(-width * 0.78f, height * 0.88f, -width * 0.18f, height * 0.68f, 0f, 0f)
+        wingPath.close()
+
+        paint.shader = LinearGradient(
+            -width,
+            -height * 0.3f,
+            0f,
+            height * 0.7f,
+            intArrayOf(
+                adjustAlpha(colorA, alpha),
+                adjustAlpha(colorB, (alpha * 0.78f).toInt()),
+                adjustAlpha(Color.WHITE, (alpha * 0.3f).toInt())
+            ),
+            floatArrayOf(0f, 0.7f, 1f),
+            Shader.TileMode.CLAMP
+        )
+        paint.style = Paint.Style.FILL
+        canvas.drawPath(wingPath, paint)
+
+        paint.shader = null
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = max(1.3f, width * 0.03f)
+        paint.color = adjustAlpha(Color.WHITE, (alpha * 0.28f).toInt())
+        canvas.drawPath(wingPath, paint)
+
+        paint.color = adjustAlpha(Color.BLACK, (alpha * 0.22f).toInt())
+        paint.strokeWidth = max(0.8f, width * 0.016f)
+        canvas.drawLine(0f, 0f, -width * 0.74f, height * 0.25f, paint)
+        canvas.drawLine(0f, 0f, -width * 0.7f, -height * 0.04f, paint)
+    }
+
+    private fun drawButterfly(canvas: Canvas, butterfly: Butterfly) {
+        val wingAngle = sin(butterfly.wingPhase) * (34f + butterfly.layer * 8f)
+        val direction = atan2(butterfly.vy, butterfly.vx) * (180f / Math.PI.toFloat())
+        val alpha = when (butterfly.layer) {
+            0 -> 150
+            1 -> 195
+            else -> 230
         }
 
-        // 文字（缩放弹入）
+        canvas.save()
+        canvas.translate(butterfly.x, butterfly.y)
+        canvas.rotate(direction + 90f)
+
+        hazePaint.maskFilter = BlurMaskFilter(butterfly.size * 0.65f, BlurMaskFilter.Blur.NORMAL)
+        hazePaint.color = adjustAlpha(butterfly.colorA, (alpha * 0.24f).toInt())
+        canvas.drawCircle(0f, 0f, butterfly.size * 1.25f, hazePaint)
+
+        canvas.save()
+        canvas.translate(-butterfly.size * 0.08f, -butterfly.size * 0.1f)
+        canvas.rotate(-wingAngle)
+        drawWing(canvas, butterfly.size * 1.12f, butterfly.size * 0.96f, butterfly.colorA, butterfly.colorB, alpha)
+        canvas.restore()
+
+        canvas.save()
+        canvas.translate(butterfly.size * 0.08f, -butterfly.size * 0.1f)
+        canvas.rotate(wingAngle)
+        canvas.scale(-1f, 1f)
+        drawWing(canvas, butterfly.size * 1.12f, butterfly.size * 0.96f, butterfly.colorA, butterfly.colorB, alpha)
+        canvas.restore()
+
+        canvas.save()
+        canvas.translate(-butterfly.size * 0.05f, butterfly.size * 0.44f)
+        canvas.rotate(-wingAngle * 0.75f)
+        drawWing(canvas, butterfly.size * 0.78f, butterfly.size * 0.58f, butterfly.colorB, butterfly.colorA, (alpha * 0.86f).toInt())
+        canvas.restore()
+
+        canvas.save()
+        canvas.translate(butterfly.size * 0.05f, butterfly.size * 0.44f)
+        canvas.rotate(wingAngle * 0.75f)
+        canvas.scale(-1f, 1f)
+        drawWing(canvas, butterfly.size * 0.78f, butterfly.size * 0.58f, butterfly.colorB, butterfly.colorA, (alpha * 0.86f).toInt())
+        canvas.restore()
+
+        paint.shader = null
+        paint.style = Paint.Style.FILL
+        paint.color = Color.argb(alpha, 40, 24, 16)
+        canvas.drawRoundRect(
+            -butterfly.size * 0.08f,
+            -butterfly.size * 0.65f,
+            butterfly.size * 0.08f,
+            butterfly.size * 0.68f,
+            butterfly.size * 0.08f,
+            butterfly.size * 0.08f,
+            paint
+        )
+
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = 1.5f
+        paint.color = adjustAlpha(Color.WHITE, (alpha * 0.4f).toInt())
+        canvas.drawLine(-butterfly.size * 0.03f, -butterfly.size * 0.58f, -butterfly.size * 0.22f, -butterfly.size * 1.02f, paint)
+        canvas.drawLine(butterfly.size * 0.03f, -butterfly.size * 0.58f, butterfly.size * 0.22f, -butterfly.size * 1.02f, paint)
+        canvas.restore()
+    }
+
+    override fun onDrawEffect(canvas: Canvas) {
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), backgroundPaint)
+
+        hazePaint.maskFilter = BlurMaskFilter(width * 0.1f, BlurMaskFilter.Blur.NORMAL)
+        hazePaint.color = adjustAlpha(primaryColor, 34)
+        canvas.drawCircle(width * 0.18f, height * 0.22f, width * 0.16f, hazePaint)
+        hazePaint.color = adjustAlpha(secondaryColor, 26)
+        canvas.drawCircle(width * 0.78f, height * 0.76f, width * 0.2f, hazePaint)
+        hazePaint.maskFilter = null
+
+        flowers.forEach { drawFlower(canvas, it) }
+        butterflies.sortedBy { it.layer }.forEach { drawButterfly(canvas, it) }
+
         if (message.isNotEmpty()) {
             val centerX = width / 2f
-            val centerY = height * 0.56f
-
+            val centerY = height * 0.58f + sin(textFloat) * 4f
             canvas.save()
             canvas.scale(textScale, textScale, centerX, centerY)
-            textPaint.alpha = (textAlpha * 255).toInt()
-            subTextPaint.alpha = (textAlpha * 230).toInt()
+            textPaint.alpha = (textAlpha * 255).toInt().coerceIn(0, 255)
+            subTextPaint.alpha = (textAlpha * 235).toInt().coerceIn(0, 255)
             drawContrastText(canvas, message, centerX, centerY, textPaint, ContrastTextType.MAIN)
             if (subMessage.isNotEmpty()) {
                 drawContrastText(canvas, subMessage, centerX, centerY + 52f, subTextPaint, ContrastTextType.SUB)
@@ -305,59 +321,44 @@ class ButterflyEffect @JvmOverloads constructor(
         val h = height
         if (w == 0 || h == 0) return
 
-        // 文字缩放弹入（弹簧效果）
-        if (frameCount <= 90) {
-            val t = frameCount / 90f
-            // 弹簧公式：逐渐收敛到1.0
-            textScale = 1f - 0.7f * exp(-t * 5f) * cos(t * 18f)
-            textAlpha = (t * 1.5f).coerceIn(0f, 1f)
-        } else {
-            textScale = 1f
-            textAlpha = 1f
-        }
+        val t = (frameCount / 88f).coerceIn(0f, 1f)
+        textScale = 1f - 0.28f * exp(-t * 5.2f) * cos(t * 14f)
+        textAlpha = (t * 1.5f).coerceIn(0f, 1f)
+        textFloat += 0.03f
 
-        // 更新蝴蝶
-        for (bf in butterflies) {
-            bf.wingPhase += bf.wingSpeed * animationSpeed
-            bf.wanderPhase += 0.01f
-            bf.framesSinceTarget++
+        butterflies.forEach { butterfly ->
+            butterfly.phase += 0.012f
+            butterfly.wingPhase += butterfly.wingSpeed * animationSpeed
+            butterfly.targetTimer++
 
-            // 定期更换目标位置（模拟蝴蝶漫飞）
-            if (bf.framesSinceTarget > 150 + Random.nextInt(100)) {
-                bf.targetX = Random.nextFloat() * w
-                bf.targetY = Random.nextFloat() * h * 0.9f
-                bf.framesSinceTarget = 0
+            if (butterfly.targetTimer > 100 + butterfly.layer * 30) {
+                butterfly.targetX = Random.nextFloat() * w
+                butterfly.targetY = h * (0.12f + Random.nextFloat() * 0.62f)
+                butterfly.targetTimer = 0
             }
 
-            // 向目标方向移动（加入曲线游走）
-            val dx = bf.targetX - bf.x
-            val dy = bf.targetY - bf.y
-            val dist = sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
-            val baseSpeed = (Random.nextFloat() * 0.5f + 0.8f) * animationSpeed
+            val dx = butterfly.targetX - butterfly.x
+            val dy = butterfly.targetY - butterfly.y
+            val distance = sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
+            val impulse = 0.07f + butterfly.layer * 0.02f
+            butterfly.vx = (butterfly.vx + dx / distance * impulse) * 0.96f + sin(butterfly.phase * 2.2f) * 0.14f
+            butterfly.vy = (butterfly.vy + dy / distance * impulse) * 0.96f + cos(butterfly.phase * 1.7f) * 0.11f
 
-            // 追踪目标 + 正弦曲线游走叠加
-            bf.vx = (bf.vx + dx / dist * 0.15f) * 0.92f +
-                    sin(bf.wanderPhase * 2.3f) * 0.5f
-            bf.vy = (bf.vy + dy / dist * 0.15f) * 0.92f +
-                    cos(bf.wanderPhase * 1.7f) * 0.5f
-
-            // 限速
-            val speed = sqrt(bf.vx * bf.vx + bf.vy * bf.vy).coerceAtLeast(0.01f)
-            val maxSpeed = 3f * baseSpeed
+            val maxSpeed = 1.9f + butterfly.layer * 0.6f
+            val speed = sqrt(butterfly.vx * butterfly.vx + butterfly.vy * butterfly.vy).coerceAtLeast(0.001f)
             if (speed > maxSpeed) {
-                bf.vx = bf.vx / speed * maxSpeed
-                bf.vy = bf.vy / speed * maxSpeed
+                butterfly.vx = butterfly.vx / speed * maxSpeed
+                butterfly.vy = butterfly.vy / speed * maxSpeed
             }
 
-            bf.x += bf.vx
-            bf.y += bf.vy
+            butterfly.x += butterfly.vx * animationSpeed
+            butterfly.y += butterfly.vy * animationSpeed
 
-            // 边界软约束（靠近边界时反弹）
-            val margin = 60f
-            if (bf.x < margin) bf.vx += 0.3f
-            if (bf.x > w - margin) bf.vx -= 0.3f
-            if (bf.y < margin) bf.vy += 0.3f
-            if (bf.y > h - margin) bf.vy -= 0.3f
+            val margin = 56f
+            if (butterfly.x < margin) butterfly.vx += 0.24f
+            if (butterfly.x > w - margin) butterfly.vx -= 0.24f
+            if (butterfly.y < margin) butterfly.vy += 0.22f
+            if (butterfly.y > h - margin) butterfly.vy -= 0.22f
         }
     }
 }
