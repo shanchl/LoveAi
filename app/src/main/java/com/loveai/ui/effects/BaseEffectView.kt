@@ -6,6 +6,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.RadialGradient
 import android.graphics.Shader
 import android.util.AttributeSet
@@ -14,6 +15,7 @@ import com.loveai.model.Effect
 import com.loveai.model.EffectType
 import com.loveai.model.EffectVariant
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.sin
 
 /**
@@ -227,17 +229,20 @@ abstract class BaseEffectView @JvmOverloads constructor(
     ) {
         if (text.isEmpty()) return
 
-        val textWidth = paint.measureText(text)
-        val fontMetrics = paint.fontMetrics
         val style = resolveTextDecorStyle(textType)
-        val rectLeft = x - textWidth / 2f - if (textType == ContrastTextType.MAIN) 24f else 20f
-        val rectTop = y + fontMetrics.ascent - if (textType == ContrastTextType.MAIN) 14f else 12f
-        val rectRight = x + textWidth / 2f + if (textType == ContrastTextType.MAIN) 24f else 20f
-        val rectBottom = y + fontMetrics.descent + if (textType == ContrastTextType.MAIN) 14f else 12f
-        val radius = if (textType == ContrastTextType.MAIN) 20f else 16f
-
-        drawTextPanel(canvas, rectLeft, rectTop, rectRight, rectBottom, radius, style, textType)
-        drawStyledText(canvas, text, x, y, paint, style, textType)
+        val layoutMode = resolveTextLayoutMode(textType)
+        val layout = buildTextLayout(text, x, y, paint, textType, layoutMode)
+        drawTextPanel(
+            canvas,
+            layout.bounds.left,
+            layout.bounds.top,
+            layout.bounds.right,
+            layout.bounds.bottom,
+            if (textType == ContrastTextType.MAIN) 20f else 16f,
+            style,
+            textType
+        )
+        drawStyledText(canvas, text, paint, style, textType, layout)
     }
 
     private fun resolveTextDecorStyle(textType: ContrastTextType): TextDecorStyle {
@@ -267,6 +272,159 @@ abstract class BaseEffectView @JvmOverloads constructor(
                 if (textType == ContrastTextType.MAIN) TextDecorStyle.SOFT_GLOW else TextDecorStyle.RIBBON
             }
         }
+    }
+
+    private fun resolveTextLayoutMode(textType: ContrastTextType): TextLayoutMode {
+        if (textType == ContrastTextType.SUB) {
+            return when (effect?.type) {
+                EffectType.FIREWORK, EffectType.HEART_PULSE, EffectType.RIPPLE -> TextLayoutMode.CAPTION
+                EffectType.STARRY_SKY, EffectType.AURORA, EffectType.METEOR_SHOWER -> TextLayoutMode.SLANT
+                else -> TextLayoutMode.HORIZONTAL
+            }
+        }
+
+        return when (effect?.type) {
+            EffectType.FIREWORK -> TextLayoutMode.ARC
+            EffectType.STARRY_SKY -> TextLayoutMode.VERTICAL_RIGHT
+            EffectType.AURORA -> TextLayoutMode.SLANT
+            EffectType.PETAL_FALL -> TextLayoutMode.WAVE
+            EffectType.BUBBLE_FLOAT -> TextLayoutMode.WAVE
+            EffectType.TYPEWRITER -> TextLayoutMode.HORIZONTAL
+            EffectType.HEART_PULSE -> TextLayoutMode.WAVE
+            EffectType.RIPPLE -> TextLayoutMode.WAVE
+            EffectType.SNOW_FALL -> TextLayoutMode.VERTICAL_LEFT
+            EffectType.METEOR_SHOWER -> TextLayoutMode.SLANT
+            EffectType.BUTTERFLY -> TextLayoutMode.ARC
+            EffectType.HEART_RAIN -> TextLayoutMode.ARC
+            else -> TextLayoutMode.HORIZONTAL
+        }
+    }
+
+    private data class TextGlyph(
+        val text: String,
+        val x: Float,
+        val y: Float,
+        val rotation: Float = 0f
+    )
+
+    private data class TextLayoutResult(
+        val glyphs: List<TextGlyph>,
+        val bounds: RectF
+    )
+
+    private fun buildTextLayout(
+        text: String,
+        centerX: Float,
+        centerY: Float,
+        paint: Paint,
+        textType: ContrastTextType,
+        layoutMode: TextLayoutMode
+    ): TextLayoutResult {
+        val fontMetrics = paint.fontMetrics
+        val safeTop = dp(124f)
+        val safeBottom = height - dp(if (textType == ContrastTextType.MAIN) 220f else 170f)
+        val safeLeft = dp(32f)
+        val safeRight = width - dp(32f)
+        val anchorY = centerY.coerceIn(safeTop, safeBottom)
+        val anchorX = centerX.coerceIn(safeLeft, safeRight)
+        val glyphs = mutableListOf<TextGlyph>()
+        val charWidths = text.map { paint.measureText(it.toString()) }
+        val charSpacing = paint.textSize * 0.08f
+
+        when (layoutMode) {
+            TextLayoutMode.HORIZONTAL, TextLayoutMode.CAPTION -> {
+                glyphs += TextGlyph(text, anchorX - paint.measureText(text) / 2f, anchorY, 0f)
+            }
+
+            TextLayoutMode.VERTICAL_RIGHT, TextLayoutMode.VERTICAL_LEFT -> {
+                val step = paint.fontSpacing * 0.9f
+                val totalHeight = step * (text.length - 1)
+                val baseY = (anchorY - totalHeight / 2f).coerceAtLeast(safeTop - fontMetrics.ascent)
+                val xOffset = if (layoutMode == TextLayoutMode.VERTICAL_RIGHT) dp(26f) else -dp(26f)
+                text.forEachIndexed { index, ch ->
+                    glyphs += TextGlyph(
+                        text = ch.toString(),
+                        x = (anchorX + xOffset).coerceIn(safeLeft, safeRight),
+                        y = (baseY + index * step).coerceAtMost(safeBottom),
+                        rotation = 0f
+                    )
+                }
+            }
+
+            TextLayoutMode.SLANT -> {
+                val totalWidth = charWidths.sum() + charSpacing * (text.length - 1)
+                var cursorX = anchorX - totalWidth / 2f
+                text.forEachIndexed { index, ch ->
+                    val rotation = -14f + index * 1.2f
+                    val offsetY = index * paint.textSize * 0.12f
+                    glyphs += TextGlyph(ch.toString(), cursorX, (anchorY + offsetY).coerceAtMost(safeBottom), rotation)
+                    cursorX += charWidths[index] + charSpacing
+                }
+            }
+
+            TextLayoutMode.WAVE -> {
+                val totalWidth = charWidths.sum() + charSpacing * (text.length - 1)
+                var cursorX = anchorX - totalWidth / 2f
+                val frame = currentRenderFrame().toFloat()
+                text.forEachIndexed { index, ch ->
+                    val offsetY = sin(frame * 0.08f + index * 0.65f) * paint.textSize * 0.22f
+                    glyphs += TextGlyph(ch.toString(), cursorX, (anchorY + offsetY).coerceIn(safeTop, safeBottom), 0f)
+                    cursorX += charWidths[index] + charSpacing
+                }
+            }
+
+            TextLayoutMode.ARC -> {
+                val radius = (paint.textSize * 2.2f).coerceIn(dp(70f), dp(110f))
+                val angleStep = 10f
+                val startAngle = -90f - angleStep * (text.length - 1) / 2f
+                val arcCenterY = (anchorY + radius * 0.85f).coerceAtMost(safeBottom + radius * 0.2f)
+                text.forEachIndexed { index, ch ->
+                    val angle = Math.toRadians((startAngle + index * angleStep).toDouble())
+                    val glyphX = anchorX + radius * cos(angle).toFloat()
+                    val glyphY = arcCenterY + radius * sin(angle).toFloat()
+                    glyphs += TextGlyph(
+                        text = ch.toString(),
+                        x = glyphX,
+                        y = glyphY.coerceIn(safeTop, safeBottom),
+                        rotation = startAngle + index * angleStep + 90f
+                    )
+                }
+            }
+        }
+
+        return TextLayoutResult(glyphs, computeGlyphBounds(glyphs, paint, fontMetrics, textType))
+    }
+
+    private fun computeGlyphBounds(
+        glyphs: List<TextGlyph>,
+        paint: Paint,
+        fontMetrics: Paint.FontMetrics,
+        textType: ContrastTextType
+    ): RectF {
+        val paddingH = if (textType == ContrastTextType.MAIN) 24f else 20f
+        val paddingV = if (textType == ContrastTextType.MAIN) 14f else 12f
+        var left = Float.MAX_VALUE
+        var top = Float.MAX_VALUE
+        var right = Float.MIN_VALUE
+        var bottom = Float.MIN_VALUE
+
+        glyphs.forEach { glyph ->
+            val width = paint.measureText(glyph.text)
+            left = minOf(left, glyph.x - paddingH)
+            top = minOf(top, glyph.y + fontMetrics.ascent - paddingV)
+            right = maxOf(right, glyph.x + width + paddingH)
+            bottom = maxOf(bottom, glyph.y + fontMetrics.descent + paddingV)
+        }
+
+        if (left == Float.MAX_VALUE) {
+            return RectF(0f, 0f, 0f, 0f)
+        }
+
+        return RectF(left, top, right, bottom)
+    }
+
+    private fun dp(value: Float): Float {
+        return value * resources.displayMetrics.density
     }
 
     private fun drawTextPanel(
@@ -442,11 +600,10 @@ abstract class BaseEffectView @JvmOverloads constructor(
     private fun drawStyledText(
         canvas: Canvas,
         text: String,
-        centerX: Float,
-        baselineY: Float,
         paint: Paint,
         decorStyle: TextDecorStyle,
-        textType: ContrastTextType
+        textType: ContrastTextType,
+        layout: TextLayoutResult
     ) {
         val savedAlpha = paint.alpha
         val savedAlign = paint.textAlign
@@ -471,10 +628,10 @@ abstract class BaseEffectView @JvmOverloads constructor(
             paint.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
         } else if (decorStyle == TextDecorStyle.STARDUST || decorStyle == TextDecorStyle.GALAXY) {
             paint.shader = LinearGradient(
-                centerX - paint.measureText(text) / 2f,
-                baselineY - paint.textSize,
-                centerX + paint.measureText(text) / 2f,
-                baselineY,
+                layout.bounds.left,
+                layout.bounds.top,
+                layout.bounds.right,
+                layout.bounds.bottom,
                 intArrayOf(Color.WHITE, adjustAlpha(Color.WHITE, 230), adjustAlpha(primaryColor, 220)),
                 floatArrayOf(0f, 0.58f, 1f),
                 Shader.TileMode.CLAMP
@@ -484,13 +641,8 @@ abstract class BaseEffectView @JvmOverloads constructor(
         }
 
         val frame = currentRenderFrame().toFloat()
-        val totalWidth = paint.measureText(text)
-        var cursorX = centerX - totalWidth / 2f
-
-        text.forEachIndexed { index, ch ->
-            val char = ch.toString()
-            val charWidth = paint.measureText(char)
-            val normalized = index - (text.length - 1) / 2f
+        layout.glyphs.forEachIndexed { index, glyph ->
+            val normalized = index - (layout.glyphs.size - 1) / 2f
             val offsetY = when (decorStyle) {
                 TextDecorStyle.BURST -> -abs(normalized) * 0.7f + sin(frame * 0.08f + index * 0.6f) * 1.8f
                 TextDecorStyle.CINEMATIC -> sin(frame * 0.04f + index * 0.35f) * 0.9f
@@ -511,11 +663,15 @@ abstract class BaseEffectView @JvmOverloads constructor(
                 TextDecorStyle.RIPPLE -> normalized * 0.15f
                 else -> 0f
             }
-            val charX = cursorX + offsetX
-            val charY = baselineY + offsetY
-            canvas.drawText(char, charX, charY, outlinePaint)
-            canvas.drawText(char, charX, charY, paint)
-            cursorX += charWidth
+            val charX = glyph.x + offsetX
+            val charY = glyph.y + offsetY
+            canvas.save()
+            if (glyph.rotation != 0f) {
+                canvas.rotate(glyph.rotation, charX, charY)
+            }
+            canvas.drawText(glyph.text, charX, charY, outlinePaint)
+            canvas.drawText(glyph.text, charX, charY, paint)
+            canvas.restore()
         }
 
         paint.alpha = savedAlpha
@@ -543,6 +699,16 @@ abstract class BaseEffectView @JvmOverloads constructor(
         PULSE,
         RIPPLE,
         FROST,
+        CAPTION
+    }
+
+    private enum class TextLayoutMode {
+        HORIZONTAL,
+        VERTICAL_RIGHT,
+        VERTICAL_LEFT,
+        SLANT,
+        WAVE,
+        ARC,
         CAPTION
     }
 }
