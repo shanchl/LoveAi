@@ -85,10 +85,10 @@ class EndingActivity : AppCompatActivity() {
         haloView = findViewById(R.id.vHalo)
 
         val messages = listOf(
-            "Thank you for staying through every frame.\nSome feelings deserve a slower ending.",
-            "This story does not rush the last heartbeat.\nIt lingers where love still glows.",
-            "The lights can fade softly now.\nWhat stays is the warmth between us.",
-            "Every page was only a way of saying it again:\nI still choose you."
+            "谢谢你把这一程慢慢看完。\n有些心动，本来就值得停留得更久一点。",
+            "故事走到这里，不必急着散场。\n余温还在，爱意也还在。",
+            "如果浪漫有尾声。\n我更希望它像现在这样，轻一点，久一点。",
+            "这一页不是结束。\n只是把想说的话，再认真说一遍。"
         )
         tvMessage.text = messages.random()
 
@@ -288,7 +288,7 @@ class EndingActivity : AppCompatActivity() {
         val shareText = buildString {
             append("LoveAI\n")
             append(tvMessage.text)
-            append("\n\nNow playing: ")
+            append("\n\n当前音乐：")
             append(MusicManager.getCurrentSongName())
         }
 
@@ -297,7 +297,7 @@ class EndingActivity : AppCompatActivity() {
             putExtra(Intent.EXTRA_TEXT, shareText)
             type = "text/plain"
         }
-        startActivity(Intent.createChooser(shareIntent, "Share"))
+        startActivity(Intent.createChooser(shareIntent, "分享这一刻"))
     }
 
     override fun onResume() {

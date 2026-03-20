@@ -36,8 +36,7 @@
             android:alpha="0"
             android:fontFamily="serif"
             android:letterSpacing="0.18"
-            android:text="LOVE AI"
-            android:textAllCaps="true"
+            android:text="浪漫序章"
             android:textColor="@color/text_white"
             android:textSize="30sp"
             android:textStyle="bold" />
@@ -51,7 +50,7 @@
             android:fontFamily="sans-serif-light"
             android:gravity="center"
             android:letterSpacing="0.08"
-            android:text="A cinematic love letter is loading"
+            android:text="正在缓缓展开一封写给你的情书"
             android:textColor="#EAD7E6"
             android:textSize="15sp" />
 

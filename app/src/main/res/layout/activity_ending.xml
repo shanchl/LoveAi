@@ -38,8 +38,7 @@
             android:layout_height="wrap_content"
             android:fontFamily="serif"
             android:letterSpacing="0.16"
-            android:text="FOREVER LOVE"
-            android:textAllCaps="true"
+            android:text="此刻心动"
             android:textColor="@color/text_white"
             android:textSize="28sp"
             android:textStyle="bold" />
@@ -52,7 +51,7 @@
             android:fontFamily="sans-serif-light"
             android:gravity="center"
             android:letterSpacing="0.08"
-            android:text="A soft ending for a long heartbeat"
+            android:text="让最后一页，多停留一会儿"
             android:textColor="#E8C7D9"
             android:textSize="14sp" />
 
@@ -87,7 +86,7 @@
                 android:background="@drawable/bg_circle_button"
                 android:paddingStart="28dp"
                 android:paddingEnd="28dp"
-                android:text="Replay"
+                android:text="重新开始"
                 android:textColor="@color/white"
                 android:textSize="16sp" />
 
@@ -102,7 +101,7 @@
                 android:background="@drawable/bg_circle_button"
                 android:paddingStart="28dp"
                 android:paddingEnd="28dp"
-                android:text="Share"
+                android:text="分享此刻"
                 android:textColor="@color/white"
                 android:textSize="16sp" />
         </LinearLayout>
@@ -124,7 +123,7 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Play or pause"
+            android:contentDescription="播放或暂停音乐"
             android:src="@drawable/ic_pause" />
 
         <TextView
@@ -137,7 +136,7 @@
             android:ellipsize="marquee"
             android:marqueeRepeatLimit="marquee_forever"
             android:singleLine="true"
-            android:text="Love Music"
+            android:text="浪漫旋律"
             android:textColor="@color/text_white"
             android:textSize="14sp" />
     </LinearLayout>

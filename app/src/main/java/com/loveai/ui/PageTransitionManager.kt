@@ -1,12 +1,11 @@
 package com.loveai.ui
 
-import android.view.View
 import androidx.viewpager2.widget.ViewPager2
 import kotlin.math.abs
 
 /**
- * 页面切换动画管理器
- * 柔和的交叉淡入淡出效果
+ * 页面切换动画管理器。
+ * 二期第二轮将切换效果调整成更明显的景深与压暗过渡。
  */
 object PageTransitionManager {
 
@@ -19,21 +18,21 @@ object PageTransitionManager {
             val absPos = abs(position)
 
             page.apply {
-                // 抵消默认滑动，让页面重叠
                 translationX = -position * width
+                translationY = absPos * 26f
+                pivotY = height * 0.5f
+                cameraDistance = width * 12f
 
                 if (absPos >= 1f) {
-                    // 完全离屏的页面隐藏
                     alpha = 0f
-                    scaleX = 0.95f
-                    scaleY = 0.95f
+                    scaleX = 0.9f
+                    scaleY = 0.9f
+                    rotationY = position * 8f
                 } else {
-                    // 柔和透明度变化
-                    alpha = 0.4f + (1f - absPos) * 0.6f
-
-                    // 轻微缩放
-                    scaleX = 0.95f + (1f - absPos) * 0.05f
-                    scaleY = 0.95f + (1f - absPos) * 0.05f
+                    alpha = 0.28f + (1f - absPos) * 0.72f
+                    scaleX = 0.9f + (1f - absPos) * 0.1f
+                    scaleY = 0.92f + (1f - absPos) * 0.08f
+                    rotationY = position * 5f
                 }
             }
         }

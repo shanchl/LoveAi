@@ -183,6 +183,10 @@ class SplashActivity : AppCompatActivity() {
             duration = 520L
             start()
         }
+        root.animate()
+            .translationY(-24f)
+            .setDuration(fadeOut.duration)
+            .start()
 
         handler.postDelayed({
             startActivity(Intent(this, MainActivity::class.java))

@@ -414,10 +414,15 @@ class MainActivity : AppCompatActivity() {
     private fun switchToNextPageWithFade(nextIndex: Int) {
         // 先取消可能残留的动画，避免连续触发时叠加
         viewPager.animate().cancel()
+        viewPager.pivotX = viewPager.width / 2f
+        viewPager.pivotY = viewPager.height / 2f
 
         viewPager.animate()
             .alpha(0.15f)
-            .setDuration(700)
+            .scaleX(0.965f)
+            .scaleY(0.965f)
+            .translationY(20f)
+            .setDuration(820)
             .withEndAction {
                 if (isFinishing || isDestroyed) return@withEndAction
 
@@ -427,7 +432,10 @@ class MainActivity : AppCompatActivity() {
                 // 切过去后再淡入
                 viewPager.animate()
                     .alpha(1f)
-                    .setDuration(700)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .translationY(0f)
+                    .setDuration(860)
                     .start()
             }
             .start()
