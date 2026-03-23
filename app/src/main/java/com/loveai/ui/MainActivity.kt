@@ -44,11 +44,13 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_PLAN_ID = "plan_id"
+        const val EXTRA_FAVORITE_ID = "favorite_id"
         private const val ENDING_PAGE_MIN_STAY_MS = 10_000L
     }
 
     private lateinit var viewModel: LoveViewModel
     private lateinit var planRepository: PlanRepository
+    private lateinit var favoriteRepository: com.loveai.repository.FavoriteRepository
     private lateinit var viewPager: ViewPager2
     private lateinit var indicatorContainer: LinearLayout
     private lateinit var btnPlayPause: ImageButton
@@ -76,6 +78,7 @@ class MainActivity : AppCompatActivity() {
 
         viewModel = ViewModelProvider(this)[LoveViewModel::class.java]
         planRepository = PlanRepository(this)
+        favoriteRepository = com.loveai.repository.FavoriteRepository(this)
 
         initMusic()
         initViews()
@@ -135,7 +138,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnFavorite.setOnClickListener {
-            viewModel.toggleCurrentFavorite()
+            val isFavorite = viewModel.toggleCurrentFavorite()
+            Toast.makeText(
+                this,
+                if (isFavorite) "\u5df2\u6536\u85cf\u5f53\u524d\u52a8\u6001" else "\u5df2\u53d6\u6d88\u6536\u85cf",
+                Toast.LENGTH_SHORT
+            ).show()
             animateFavoriteButton()
         }
 
@@ -190,6 +198,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadRequestedPlanIfPresent() {
+        val favoriteId = intent.getStringExtra(EXTRA_FAVORITE_ID)
+        if (!favoriteId.isNullOrBlank()) {
+            favoriteRepository.getFavoriteById(favoriteId)?.let { favorite ->
+                viewModel.loadFavoriteSequence(favorite)
+                applyPlanMusic(favorite.songKey)
+                return
+            }
+        }
+
         val planId = intent.getStringExtra(EXTRA_PLAN_ID) ?: return
         val plan = planRepository.getPlanById(planId) ?: return
         viewModel.loadPlan(plan)
@@ -329,6 +346,9 @@ class MainActivity : AppCompatActivity() {
     private fun startEndingActivity() {
         val endingIntent = Intent(this, EndingActivity::class.java)
         viewModel.getCurrentPlan()?.id?.let { endingIntent.putExtra(EXTRA_PLAN_ID, it) }
+        viewModel.getCurrentFavoriteSequence()?.id?.let {
+            endingIntent.putExtra(EXTRA_FAVORITE_ID, it)
+        }
         startActivity(endingIntent)
         finish()
         overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
@@ -375,14 +395,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateFavoriteButtonState() {
-        val effect = viewModel.getCurrentEffect()
         btnFavorite.setImageResource(R.drawable.ic_heart)
-        btnFavorite.alpha = if (effect?.isFavorite == true) 1f else 0.6f
+        btnFavorite.alpha = if (viewModel.isCurrentSequenceFavorite()) 1f else 0.6f
     }
 
     private fun animateFavoriteButton() {
-        val effect = viewModel.getCurrentEffect()
-        if (effect?.isFavorite == true) {
+        if (viewModel.isCurrentSequenceFavorite()) {
             val scaleX = ObjectAnimator.ofFloat(btnFavorite, "scaleX", 1f, 1.3f, 1f)
             val scaleY = ObjectAnimator.ofFloat(btnFavorite, "scaleY", 1f, 1.3f, 1f)
             scaleX.duration = 300

@@ -1,86 +1,140 @@
 package com.loveai.ui
 
+import android.content.Intent
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.GridView
+import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.loveai.R
-import com.loveai.model.Effect
-import com.loveai.model.EffectType
-import com.loveai.ui.effects.*
+import com.loveai.manager.MusicManager
+import com.loveai.model.FavoriteSequence
+import com.loveai.repository.FavoriteRepository
 import com.loveai.viewmodel.LoveViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class FavoriteActivity : AppCompatActivity() {
 
     private lateinit var viewModel: LoveViewModel
-    private lateinit var gridView: GridView
+    private lateinit var repository: FavoriteRepository
+    private lateinit var recyclerView: RecyclerView
     private lateinit var tvEmpty: TextView
+    private lateinit var adapter: FavoriteAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_favorite)
 
         viewModel = ViewModelProvider(this)[LoveViewModel::class.java]
+        repository = FavoriteRepository(this)
+        MusicManager.ensurePlaylist(this)
+
         initViews()
         observeData()
         viewModel.loadFavorites()
     }
 
     private fun initViews() {
-        gridView = findViewById(R.id.gridView)
+        recyclerView = findViewById(R.id.rvFavorites)
         tvEmpty = findViewById(R.id.tvEmpty)
-        
-        findViewById<View>(R.id.btnBack).setOnClickListener {
-            finish()
-        }
+
+        adapter = FavoriteAdapter(
+            resolveSongName = { songKey ->
+                MusicManager.getPlaylist().firstOrNull { it.key == songKey }?.name
+            },
+            onOpen = { favorite ->
+                startActivity(
+                    Intent(this, MainActivity::class.java).apply {
+                        putExtra(MainActivity.EXTRA_FAVORITE_ID, favorite.id)
+                    }
+                )
+            },
+            onDelete = { favorite ->
+                repository.deleteFavorite(favorite.id)
+                viewModel.loadFavorites()
+            }
+        )
+
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        recyclerView.adapter = adapter
+
+        findViewById<View>(R.id.btnBack).setOnClickListener { finish() }
     }
 
     private fun observeData() {
-        viewModel.favoriteEffects.observe(this) { effects: List<Effect> ->
-            if (effects.isEmpty()) {
-                gridView.visibility = View.GONE
-                tvEmpty.visibility = View.VISIBLE
-            } else {
-                gridView.visibility = View.VISIBLE
-                tvEmpty.visibility = View.GONE
-                val adapter = FavoriteAdapter(effects)
-                gridView.adapter = adapter
-            }
+        viewModel.favoriteSequences.observe(this) { favorites ->
+            val hasData = favorites.isNotEmpty()
+            recyclerView.visibility = if (hasData) View.VISIBLE else View.GONE
+            tvEmpty.visibility = if (hasData) View.GONE else View.VISIBLE
+            adapter.submitList(favorites)
         }
     }
 
-    inner class FavoriteAdapter(private val effects: List<Effect>) :
-        android.widget.BaseAdapter() {
+    private class FavoriteAdapter(
+        private val resolveSongName: (String?) -> String?,
+        private val onOpen: (FavoriteSequence) -> Unit,
+        private val onDelete: (FavoriteSequence) -> Unit
+    ) : RecyclerView.Adapter<FavoriteAdapter.FavoriteViewHolder>() {
 
-        override fun getCount() = effects.size
-        override fun getItem(position: Int) = effects[position]
-        override fun getItemId(position: Int) = position.toLong()
+        private val favorites = mutableListOf<FavoriteSequence>()
+        private val timeFormatter = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
 
-        override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup?): View {
-            val effect = effects[position]
-            val effectView: BaseEffectView = when (effect.type) {
-                EffectType.HEART_RAIN -> HeartRainEffect(this@FavoriteActivity)
-                EffectType.FIREWORK -> FireworkEffect(this@FavoriteActivity)
-                EffectType.STARRY_SKY -> StarrySkyEffect(this@FavoriteActivity)
-                EffectType.PETAL_FALL -> PetalFallEffect(this@FavoriteActivity)
-                EffectType.BUBBLE_FLOAT -> BubbleFloatEffect(this@FavoriteActivity)
-                EffectType.TYPEWRITER -> TypewriterEffect(this@FavoriteActivity)
-                EffectType.HEART_PULSE -> HeartPulseEffect(this@FavoriteActivity)
-                EffectType.RIPPLE -> RippleEffect(this@FavoriteActivity)
-                EffectType.SNOW_FALL -> SnowFallEffect(this@FavoriteActivity)
-                EffectType.METEOR_SHOWER -> MeteorShowerEffect(this@FavoriteActivity)
-                EffectType.BUTTERFLY -> ButterflyEffect(this@FavoriteActivity)
-                EffectType.AURORA -> AuroraEffect(this@FavoriteActivity)
+        fun submitList(items: List<FavoriteSequence>) {
+            favorites.clear()
+            favorites.addAll(items)
+            notifyDataSetChanged()
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FavoriteViewHolder {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_favorite_sequence, parent, false)
+            return FavoriteViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: FavoriteViewHolder, position: Int) {
+            holder.bind(favorites[position])
+        }
+
+        override fun getItemCount(): Int = favorites.size
+
+        inner class FavoriteViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            private val tvFavoriteName: TextView = itemView.findViewById(R.id.tvFavoriteName)
+            private val tvFavoriteSummary: TextView = itemView.findViewById(R.id.tvFavoriteSummary)
+            private val btnOpenFavorite: Button = itemView.findViewById(R.id.btnOpenFavorite)
+            private val btnDeleteFavorite: Button = itemView.findViewById(R.id.btnDeleteFavorite)
+
+            fun bind(favorite: FavoriteSequence) {
+                tvFavoriteName.text = favorite.name
+
+                val songName = resolveSongName(favorite.songKey) ?: "\u672a\u7ed1\u5b9a\u97f3\u4e50"
+                val createdTime = timeFormatter.format(Date(favorite.createdAt))
+                tvFavoriteSummary.text = buildString {
+                    append(favorite.effectVariantIds.size)
+                    append(" \u9875\u52a8\u6001")
+                    append(" \u00b7 ")
+                    append(songName)
+                    append(" \u00b7 ")
+                    append(createdTime)
+                    if (favorite.title.isNotBlank()) {
+                        append("\n")
+                        append(favorite.title)
+                        if (favorite.subtitle.isNotBlank()) {
+                            append(" | ")
+                            append(favorite.subtitle)
+                        }
+                    }
+                }
+
+                btnOpenFavorite.setOnClickListener { onOpen(favorite) }
+                btnDeleteFavorite.setOnClickListener { onDelete(favorite) }
             }
-            effectView.bindEffect(effect)
-            effectView.layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                400
-            )
-            return effectView
         }
     }
 }

@@ -105,4 +105,24 @@ class EffectRepository {
             )
         }
     }
+
+    fun getEffectsByVariantIds(
+        variantIds: List<Int>,
+        titleOverride: String? = null,
+        subtitleOverride: String? = null
+    ): List<Effect> {
+        val timestamp = System.currentTimeMillis()
+        return variantIds.mapNotNull { variantId ->
+            val baseVariant = EffectVariants.getVariantById(variantId) ?: return@mapNotNull null
+            val variant = baseVariant.copy(
+                message = titleOverride?.takeIf { it.isNotBlank() } ?: baseVariant.message,
+                subMessage = subtitleOverride ?: baseVariant.subMessage
+            )
+            Effect(
+                id = "effect_${variant.id}_${timestamp}_${Random.nextInt(10000)}",
+                variant = variant,
+                isFavorite = false
+            )
+        }
+    }
 }

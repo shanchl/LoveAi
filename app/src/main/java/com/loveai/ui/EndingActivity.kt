@@ -279,6 +279,9 @@ class EndingActivity : AppCompatActivity() {
         intent.getStringExtra(MainActivity.EXTRA_PLAN_ID)?.let {
             mainIntent.putExtra(MainActivity.EXTRA_PLAN_ID, it)
         }
+        intent.getStringExtra(MainActivity.EXTRA_FAVORITE_ID)?.let {
+            mainIntent.putExtra(MainActivity.EXTRA_FAVORITE_ID, it)
+        }
         mainIntent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
         startActivity(mainIntent)
         finish()

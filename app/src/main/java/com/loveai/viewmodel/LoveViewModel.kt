@@ -4,8 +4,10 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.loveai.manager.MusicManager
 import com.loveai.model.Effect
 import com.loveai.model.EffectType
+import com.loveai.model.FavoriteSequence
 import com.loveai.model.LovePlan
 import com.loveai.repository.EffectRepository
 import com.loveai.repository.FavoriteRepository
@@ -15,6 +17,7 @@ class LoveViewModel(application: Application) : AndroidViewModel(application) {
     private val effectRepository = EffectRepository()
     private val favoriteRepository = FavoriteRepository(application)
     private var activePlan: LovePlan? = null
+    private var activeFavoriteSequence: FavoriteSequence? = null
 
     private val _effects = MutableLiveData<List<Effect>>()
     val effects: LiveData<List<Effect>> = _effects
@@ -28,8 +31,8 @@ class LoveViewModel(application: Application) : AndroidViewModel(application) {
     private val _favoriteCount = MutableLiveData<Int>()
     val favoriteCount: LiveData<Int> = _favoriteCount
 
-    private val _favoriteEffects = MutableLiveData<List<Effect>>()
-    val favoriteEffects: LiveData<List<Effect>> = _favoriteEffects
+    private val _favoriteSequences = MutableLiveData<List<FavoriteSequence>>()
+    val favoriteSequences: LiveData<List<FavoriteSequence>> = _favoriteSequences
 
     private var autoSlideInterval: Long = 10_000L
 
@@ -43,35 +46,44 @@ class LoveViewModel(application: Application) : AndroidViewModel(application) {
 
     fun generateRandomEffects() {
         activePlan = null
-        val newEffects = effectRepository.getRandomEffects(8)
-        val updatedEffects = newEffects.map { effect ->
-            effect.copy(isFavorite = favoriteRepository.isFavorite(effect.variant.id))
-        }
-        _effects.value = updatedEffects
+        activeFavoriteSequence = null
+        _effects.value = effectRepository.getRandomEffects(8)
         _currentIndex.value = 0
     }
 
     fun loadPlan(plan: LovePlan) {
         activePlan = plan
-        val newEffects = effectRepository.getEffectsByTypes(
+        activeFavoriteSequence = null
+        _effects.value = effectRepository.getEffectsByTypes(
             types = plan.effectTypes,
             titleOverride = plan.title,
             subtitleOverride = plan.subtitle
         )
-        val updatedEffects = newEffects.map { effect ->
-            effect.copy(isFavorite = favoriteRepository.isFavorite(effect.variant.id))
-        }
-        _effects.value = updatedEffects
+        _currentIndex.value = 0
+    }
+
+    fun loadFavoriteSequence(sequence: FavoriteSequence) {
+        activePlan = null
+        activeFavoriteSequence = sequence
+        _effects.value = effectRepository.getEffectsByVariantIds(
+            variantIds = sequence.effectVariantIds,
+            titleOverride = sequence.title,
+            subtitleOverride = sequence.subtitle
+        )
         _currentIndex.value = 0
     }
 
     fun replayCurrentSequence() {
-        activePlan?.let {
-            loadPlan(it)
-        } ?: generateRandomEffects()
+        when {
+            activeFavoriteSequence != null -> loadFavoriteSequence(activeFavoriteSequence!!)
+            activePlan != null -> loadPlan(activePlan!!)
+            else -> generateRandomEffects()
+        }
     }
 
     fun getCurrentPlan(): LovePlan? = activePlan
+
+    fun getCurrentFavoriteSequence(): FavoriteSequence? = activeFavoriteSequence
 
     fun buildPreviewPlan(title: String, subtitle: String, effectTypes: List<EffectType>): LovePlan {
         return LovePlan(
@@ -119,24 +131,28 @@ class LoveViewModel(application: Application) : AndroidViewModel(application) {
         _isPlaying.value = false
     }
 
-    fun toggleFavoriteByVariantId(variantId: Int) {
-        val isFav = favoriteRepository.toggleFavorite(variantId)
-        _effects.value = _effects.value?.map { effect ->
-            if (effect.variant.id == variantId) {
-                effect.copy(isFavorite = isFav)
-            } else {
-                effect
-            }
-        }
+    fun toggleCurrentFavorite(): Boolean {
+        val effects = _effects.value ?: return false
+        if (effects.isEmpty()) return false
+
+        val variantIds = effects.map { it.variant.id }
+        val firstEffect = effects.first()
+        val name = activePlan?.name ?: activeFavoriteSequence?.name
+        val isFavorite = favoriteRepository.toggleFavorite(
+            effectVariantIds = variantIds,
+            title = firstEffect.message,
+            subtitle = firstEffect.subMessage,
+            songKey = MusicManager.getCurrentSongKey(),
+            name = name
+        )
         updateFavoriteCount()
+        return isFavorite
     }
 
-    fun toggleCurrentFavorite() {
-        val current = _currentIndex.value ?: 0
-        val effects = _effects.value ?: return
-        if (current in effects.indices) {
-            toggleFavoriteByVariantId(effects[current].variant.id)
-        }
+    fun isCurrentSequenceFavorite(): Boolean {
+        val effects = _effects.value ?: return false
+        if (effects.isEmpty()) return false
+        return favoriteRepository.isFavoriteSequence(effects.map { it.variant.id })
     }
 
     fun getCurrentEffect(): Effect? {
@@ -150,7 +166,7 @@ class LoveViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun loadFavorites() {
-        _favoriteEffects.value = favoriteRepository.getFavoriteEffects()
+        _favoriteSequences.value = favoriteRepository.getAllFavorites()
     }
 
     fun setAutoSlideInterval(intervalMs: Long) {
