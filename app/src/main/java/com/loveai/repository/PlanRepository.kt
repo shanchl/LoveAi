@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.loveai.model.EffectType
 import com.loveai.model.LovePlan
+import com.loveai.model.PlanPageText
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
@@ -44,6 +45,7 @@ class PlanRepository(context: Context) {
         title: String,
         subtitle: String,
         effectTypes: List<EffectType>,
+        pageTexts: List<PlanPageText> = emptyList(),
         themeKey: String? = null,
         coverKey: String? = null,
         tags: List<String> = emptyList(),
@@ -58,6 +60,7 @@ class PlanRepository(context: Context) {
             title = title.ifBlank { "\u7ed9\u4f60\u7684\u6d6a\u6f2b\u7247\u6bb5" },
             subtitle = subtitle,
             effectTypes = effectTypes.take(MAX_EFFECT_COUNT),
+            pageTexts = pageTexts.take(MAX_EFFECT_COUNT),
             themeKey = themeKey,
             coverKey = coverKey,
             tags = tags.map { it.trim() }.filter { it.isNotBlank() }.distinct().take(6),
@@ -89,6 +92,7 @@ class PlanRepository(context: Context) {
             title = original.title,
             subtitle = original.subtitle,
             effectTypes = original.effectTypes,
+            pageTexts = original.pageTexts,
             themeKey = original.themeKey,
             coverKey = original.coverKey,
             tags = original.tags,
@@ -150,6 +154,19 @@ class PlanRepository(context: Context) {
                     put("name", plan.name)
                     put("title", plan.title)
                     put("subtitle", plan.subtitle)
+                    put(
+                        "pageTexts",
+                        JSONArray().apply {
+                            plan.pageTexts.forEach { pageText ->
+                                put(
+                                    JSONObject().apply {
+                                        put("title", pageText.title)
+                                        put("subtitle", pageText.subtitle)
+                                    }
+                                )
+                            }
+                        }
+                    )
                     put("themeKey", plan.themeKey)
                     put("coverKey", plan.coverKey)
                     put("songKey", plan.songKey)
@@ -182,6 +199,17 @@ class PlanRepository(context: Context) {
             runCatching { EffectType.valueOf(typeName) }.getOrNull()?.let { types += it }
         }
         if (types.isEmpty()) return null
+        val pageTextsArray = obj.optJSONArray("pageTexts")
+        val pageTexts = mutableListOf<PlanPageText>()
+        if (pageTextsArray != null) {
+            for (index in 0 until pageTextsArray.length()) {
+                val pageObj = pageTextsArray.optJSONObject(index) ?: continue
+                pageTexts += PlanPageText(
+                    title = pageObj.optString("title"),
+                    subtitle = pageObj.optString("subtitle")
+                )
+            }
+        }
         val tagsArray = obj.optJSONArray("tags")
         val tags = mutableListOf<String>()
         if (tagsArray != null) {
@@ -199,6 +227,7 @@ class PlanRepository(context: Context) {
             title = obj.optString("title"),
             subtitle = obj.optString("subtitle"),
             effectTypes = types.take(MAX_EFFECT_COUNT),
+            pageTexts = pageTexts.take(MAX_EFFECT_COUNT),
             themeKey = obj.optString("themeKey").ifBlank { null },
             coverKey = obj.optString("coverKey").ifBlank { null },
             tags = tags,

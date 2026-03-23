@@ -3,6 +3,7 @@ package com.loveai.repository
 import com.loveai.model.Effect
 import com.loveai.model.EffectType
 import com.loveai.model.EffectVariant
+import com.loveai.model.PlanPageText
 import kotlin.random.Random
 
 /**
@@ -89,14 +90,20 @@ class EffectRepository {
     fun getEffectsByTypes(
         types: List<EffectType>,
         titleOverride: String? = null,
-        subtitleOverride: String? = null
+        subtitleOverride: String? = null,
+        pageTexts: List<PlanPageText> = emptyList()
     ): List<Effect> {
         val timestamp = System.currentTimeMillis()
-        return types.map { type ->
+        return types.mapIndexed { index, type ->
             val baseEffect = getEffectByType(type)
+            val pageText = pageTexts.getOrNull(index)
             val variant = baseEffect.variant.copy(
-                message = titleOverride?.takeIf { it.isNotBlank() } ?: baseEffect.variant.message,
-                subMessage = subtitleOverride ?: baseEffect.variant.subMessage
+                message = pageText?.title?.takeIf { it.isNotBlank() }
+                    ?: titleOverride?.takeIf { it.isNotBlank() }
+                    ?: baseEffect.variant.message,
+                subMessage = pageText?.subtitle?.takeIf { it.isNotBlank() }
+                    ?: subtitleOverride
+                    ?: baseEffect.variant.subMessage
             )
             Effect(
                 id = "effect_${variant.id}_${timestamp}_${Random.nextInt(10000)}",

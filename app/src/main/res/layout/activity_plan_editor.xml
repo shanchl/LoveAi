@@ -148,6 +148,13 @@
             android:padding="10dp"
             android:spinnerMode="dropdown" />
 
+        <Button
+            android:id="@+id/btnImportSong"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="&#23548;&#20837;&#26412;&#22320;&#38899;&#20048;" />
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -177,6 +184,30 @@
             android:layout_width="match_parent"
             android:layout_height="280dp"
             android:nestedScrollingEnabled="true" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="&#36880;&#39029;&#25991;&#26696;"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="&#22914;&#26524;&#19981;&#22635;&#20889;&#65292;&#40664;&#35748;&#32487;&#25215;&#19978;&#38754;&#30340;&#20027;&#26631;&#39064;&#21644;&#21103;&#26631;&#39064;&#12290;"
+            android:textColor="#A8FFFFFF"
+            android:textSize="12sp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvPageTexts"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:nestedScrollingEnabled="false" />
 
         <LinearLayout
             android:layout_width="match_parent"

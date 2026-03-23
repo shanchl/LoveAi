@@ -57,7 +57,8 @@ class LoveViewModel(application: Application) : AndroidViewModel(application) {
         _effects.value = effectRepository.getEffectsByTypes(
             types = plan.effectTypes,
             titleOverride = plan.title,
-            subtitleOverride = plan.subtitle
+            subtitleOverride = plan.subtitle,
+            pageTexts = plan.pageTexts
         )
         _currentIndex.value = 0
     }
@@ -92,6 +93,7 @@ class LoveViewModel(application: Application) : AndroidViewModel(application) {
             title = title,
             subtitle = subtitle,
             effectTypes = effectTypes.take(8),
+            pageTexts = emptyList(),
             createdAt = System.currentTimeMillis()
         )
     }

@@ -6,6 +6,7 @@ data class LovePlan(
     val title: String,
     val subtitle: String,
     val effectTypes: List<EffectType>,
+    val pageTexts: List<PlanPageText> = emptyList(),
     val themeKey: String? = null,
     val coverKey: String? = null,
     val tags: List<String> = emptyList(),

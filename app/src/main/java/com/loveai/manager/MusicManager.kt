@@ -1,9 +1,12 @@
 package com.loveai.manager
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.media.MediaPlayer
 import android.net.Uri
 import com.loveai.R
+import org.json.JSONArray
+import org.json.JSONObject
 import java.util.Locale
 
 object MusicManager {
@@ -24,6 +27,8 @@ object MusicManager {
     private var playlist: List<Song> = emptyList()
     private var currentSongIndex: Int = 0
     private var playMode: PlayMode = PlayMode.LOOP
+    private const val PREFS_NAME = "loveai_music"
+    private const val KEY_EXTERNAL_SONGS = "external_songs"
 
     enum class PlayMode {
         LOOP,
@@ -66,9 +71,9 @@ object MusicManager {
     }
 
     fun initAutoPlaylist(context: Context) {
-        val songs = scanRawMusicResources(context)
+        val songs = scanRawMusicResources(context) + loadExternalSongs(context)
         if (songs.isNotEmpty()) {
-            initPlaylist(context, songs)
+            initPlaylist(context, songs.distinctBy { it.key })
         } else {
             init(context)
         }
@@ -238,6 +243,34 @@ object MusicManager {
         }
     }
 
+    fun registerExternalSong(context: Context, uri: Uri, name: String): String {
+        val songKey = "local:$uri"
+        val previousSongKey = getCurrentSongKey()
+        val wasPlaying = isMusicPlaying()
+        val songs = loadExternalSongs(context).toMutableList()
+        val existingIndex = songs.indexOfFirst { it.key == songKey }
+        val song = Song(
+            id = songs.size + 10_000,
+            key = songKey,
+            name = name,
+            uri = uri
+        )
+        if (existingIndex >= 0) {
+            songs[existingIndex] = song
+        } else {
+            songs += song
+        }
+        persistExternalSongs(context, songs)
+        initAutoPlaylist(context)
+        if (!previousSongKey.isNullOrBlank()) {
+            playByKey(previousSongKey)
+        }
+        if (!wasPlaying) {
+            pause()
+        }
+        return songKey
+    }
+
     fun play() {
         if (isPrepared && mediaPlayer != null && !isPlaying) {
             try {
@@ -337,5 +370,43 @@ object MusicManager {
 
     fun initFromUri(context: Context, uri: Uri) {
         init(context)
+    }
+
+    private fun getPrefs(context: Context): SharedPreferences {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    }
+
+    private fun loadExternalSongs(context: Context): List<Song> {
+        val raw = getPrefs(context).getString(KEY_EXTERNAL_SONGS, "[]") ?: "[]"
+        val array = JSONArray(raw)
+        val songs = mutableListOf<Song>()
+        for (index in 0 until array.length()) {
+            val item = array.optJSONObject(index) ?: continue
+            val uriValue = item.optString("uri")
+            if (uriValue.isBlank()) continue
+            val key = item.optString("key").ifBlank { "local:$uriValue" }
+            val name = item.optString("name").ifBlank { "\u672c\u5730\u97f3\u4e50" }
+            songs += Song(
+                id = 10_000 + index,
+                key = key,
+                name = name,
+                uri = Uri.parse(uriValue)
+            )
+        }
+        return songs
+    }
+
+    private fun persistExternalSongs(context: Context, songs: List<Song>) {
+        val array = JSONArray()
+        songs.forEach { song ->
+            array.put(
+                JSONObject().apply {
+                    put("key", song.key)
+                    put("name", song.name)
+                    put("uri", song.uri?.toString())
+                }
+            )
+        }
+        getPrefs(context).edit().putString(KEY_EXTERNAL_SONGS, array.toString()).apply()
     }
 }

@@ -1,7 +1,11 @@
 package com.loveai.ui
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,6 +16,7 @@ import android.widget.EditText
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -19,6 +24,7 @@ import com.loveai.R
 import com.loveai.manager.MusicManager
 import com.loveai.model.EffectType
 import com.loveai.model.PlanCover
+import com.loveai.model.PlanPageText
 import com.loveai.model.PlanTheme
 import com.loveai.repository.PlanRepository
 
@@ -39,15 +45,19 @@ class PlanEditorActivity : AppCompatActivity() {
     private lateinit var tvCoverHint: TextView
     private lateinit var rvSelected: RecyclerView
     private lateinit var rvAvailable: RecyclerView
+    private lateinit var rvPageTexts: RecyclerView
     private lateinit var btnSave: Button
     private lateinit var btnCancel: Button
     private lateinit var btnApplyTheme: Button
+    private lateinit var btnImportSong: Button
 
     private lateinit var selectedAdapter: SelectedEffectsAdapter
     private lateinit var availableAdapter: AvailableEffectsAdapter
+    private lateinit var pageTextAdapter: PageTextAdapter
     private lateinit var planRepository: PlanRepository
 
     private val selectedTypes = mutableListOf<EffectType>()
+    private val pageTexts = mutableListOf<PlanPageText>()
     private val allTypes = EffectType.values().toList()
     private val themes = listOf<PlanTheme?>(null) + PlanTheme.values().toList()
     private val covers = listOf<PlanCover?>(null) + PlanCover.values().toList()
@@ -55,6 +65,13 @@ class PlanEditorActivity : AppCompatActivity() {
     private val maxEffectCount = 8
     private var songs: List<MusicManager.Song> = emptyList()
     private var editingPlanId: String? = null
+
+    private val importSongLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@registerForActivityResult
+        handleImportedSong(uri)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -83,13 +100,26 @@ class PlanEditorActivity : AppCompatActivity() {
         tvCoverHint = findViewById(R.id.tvCoverHint)
         rvSelected = findViewById(R.id.rvSelectedEffects)
         rvAvailable = findViewById(R.id.rvAvailableEffects)
+        rvPageTexts = findViewById(R.id.rvPageTexts)
         btnSave = findViewById(R.id.btnSavePlan)
         btnCancel = findViewById(R.id.btnCancelEdit)
         btnApplyTheme = findViewById(R.id.btnApplyTheme)
+        btnImportSong = findViewById(R.id.btnImportSong)
 
         btnSave.setOnClickListener { savePlan() }
         btnCancel.setOnClickListener { finish() }
         btnApplyTheme.setOnClickListener { applyCurrentTheme() }
+        btnImportSong.setOnClickListener { importSongLauncher.launch(arrayOf("audio/*")) }
+
+        val defaultTextWatcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+            override fun afterTextChanged(s: Editable?) {
+                pageTextAdapter.notifyDataSetChanged()
+            }
+        }
+        etTitle.addTextChangedListener(defaultTextWatcher)
+        etSubtitle.addTextChangedListener(defaultTextWatcher)
     }
 
     private fun initThemeSelector() {
@@ -118,7 +148,7 @@ class PlanEditorActivity : AppCompatActivity() {
         updateCoverHint()
     }
 
-    private fun initSongSelector() {
+    private fun initSongSelector(selectedSongKey: String? = null) {
         songs = listOf(
             MusicManager.Song(
                 id = -1,
@@ -135,6 +165,10 @@ class PlanEditorActivity : AppCompatActivity() {
             setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
         spSong.adapter = songAdapter
+
+        val songIndex = songs.indexOfFirst { it.key == (selectedSongKey ?: "") }
+            .takeIf { it >= 0 } ?: 0
+        spSong.setSelection(songIndex)
     }
 
     private fun initLists() {
@@ -142,17 +176,20 @@ class PlanEditorActivity : AppCompatActivity() {
             onMoveUp = { position ->
                 if (position > 0) {
                     selectedTypes.add(position - 1, selectedTypes.removeAt(position))
+                    pageTexts.add(position - 1, pageTexts.removeAt(position))
                     refreshLists()
                 }
             },
             onMoveDown = { position ->
                 if (position < selectedTypes.lastIndex) {
                     selectedTypes.add(position + 1, selectedTypes.removeAt(position))
+                    pageTexts.add(position + 1, pageTexts.removeAt(position))
                     refreshLists()
                 }
             },
             onRemove = { position ->
                 selectedTypes.removeAt(position)
+                pageTexts.removeAt(position)
                 refreshLists()
             }
         )
@@ -166,16 +203,33 @@ class PlanEditorActivity : AppCompatActivity() {
                 ).show()
             } else if (type !in selectedTypes) {
                 selectedTypes += type
+                pageTexts += PlanPageText()
                 refreshLists()
             }
         }
 
+        pageTextAdapter = PageTextAdapter(
+            getDefaultTitle = { etTitle.text.toString().trim() },
+            getDefaultSubtitle = { etSubtitle.text.toString().trim() },
+            onPageTextChanged = { index, title, subtitle ->
+                if (index in pageTexts.indices) {
+                    pageTexts[index] = PlanPageText(title = title, subtitle = subtitle)
+                }
+            }
+        )
+
         rvSelected.layoutManager = LinearLayoutManager(this)
         rvSelected.adapter = selectedAdapter
         rvSelected.isNestedScrollingEnabled = false
+
         rvAvailable.layoutManager = LinearLayoutManager(this)
         rvAvailable.adapter = availableAdapter
         rvAvailable.isNestedScrollingEnabled = true
+
+        rvPageTexts.layoutManager = LinearLayoutManager(this)
+        rvPageTexts.adapter = pageTextAdapter
+        rvPageTexts.isNestedScrollingEnabled = false
+
         refreshLists()
     }
 
@@ -187,8 +241,14 @@ class PlanEditorActivity : AppCompatActivity() {
         etTitle.setText(plan.title)
         etSubtitle.setText(plan.subtitle)
         etTags.setText(plan.tags.joinToString("\uff0c"))
+
         selectedTypes.clear()
         selectedTypes.addAll(plan.effectTypes)
+        pageTexts.clear()
+        pageTexts.addAll(plan.pageTexts)
+        while (pageTexts.size < selectedTypes.size) {
+            pageTexts += PlanPageText()
+        }
         refreshLists()
 
         val themeIndex = themes.indexOfFirst { it?.key == plan.themeKey }.takeIf { it >= 0 } ?: 0
@@ -199,8 +259,7 @@ class PlanEditorActivity : AppCompatActivity() {
         spCover.setSelection(coverIndex)
         updateCoverHint()
 
-        val songIndex = songs.indexOfFirst { it.key == (plan.songKey ?: "") }.takeIf { it >= 0 } ?: 0
-        spSong.setSelection(songIndex)
+        initSongSelector(plan.songKey)
     }
 
     private fun applyCurrentTheme() {
@@ -217,8 +276,12 @@ class PlanEditorActivity : AppCompatActivity() {
         if (etTags.text.isNullOrBlank()) {
             etTags.setText(theme.label)
         }
+
         selectedTypes.clear()
         selectedTypes.addAll(theme.recommendedEffects)
+        pageTexts.clear()
+        repeat(selectedTypes.size) { pageTexts += PlanPageText() }
+
         val suggestedCover = when (theme) {
             PlanTheme.CONFESSION -> PlanCover.BLUSH
             PlanTheme.ANNIVERSARY -> PlanCover.BLOOM
@@ -227,12 +290,14 @@ class PlanEditorActivity : AppCompatActivity() {
         }
         val coverIndex = covers.indexOfFirst { it == suggestedCover }.takeIf { it >= 0 } ?: 0
         spCover.setSelection(coverIndex)
+
         refreshLists()
         updateThemeHint()
         updateCoverHint()
     }
 
     private fun getSelectedTheme(): PlanTheme? = themes.getOrNull(spTheme.selectedItemPosition)
+
     private fun getSelectedCover(): PlanCover? = covers.getOrNull(spCover.selectedItemPosition)
 
     private fun getSelectedSongKey(): String? {
@@ -241,12 +306,20 @@ class PlanEditorActivity : AppCompatActivity() {
     }
 
     private fun refreshLists() {
+        while (pageTexts.size < selectedTypes.size) {
+            pageTexts += PlanPageText()
+        }
+        while (pageTexts.size > selectedTypes.size) {
+            pageTexts.removeAt(pageTexts.lastIndex)
+        }
+
         selectedAdapter.submitList(selectedTypes.toList())
         availableAdapter.submitList(
             allTypes,
             selectedTypes.toSet(),
             selectedTypes.size >= maxEffectCount
         )
+        pageTextAdapter.submitList(selectedTypes.toList(), pageTexts.toList())
     }
 
     private fun updateThemeHint() {
@@ -275,6 +348,7 @@ class PlanEditorActivity : AppCompatActivity() {
     }
 
     private fun savePlan() {
+        currentFocus?.clearFocus()
         if (selectedTypes.size !in minEffectCount..maxEffectCount) {
             Toast.makeText(
                 this,
@@ -289,6 +363,7 @@ class PlanEditorActivity : AppCompatActivity() {
             title = etTitle.text.toString().trim(),
             subtitle = etSubtitle.text.toString().trim(),
             effectTypes = selectedTypes,
+            pageTexts = pageTexts.toList(),
             themeKey = getSelectedTheme()?.key,
             coverKey = getSelectedCover()?.key,
             tags = parseTags(),
@@ -302,6 +377,22 @@ class PlanEditorActivity : AppCompatActivity() {
             }
         )
         finish()
+    }
+
+    private fun handleImportedSong(uri: Uri) {
+        val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+        contentResolver.takePersistableUriPermission(uri, takeFlags)
+        val songName = resolveDisplayName(uri) ?: "\u672c\u5730\u97f3\u4e50"
+        val key = MusicManager.registerExternalSong(this, uri, songName)
+        initSongSelector(key)
+        Toast.makeText(this, "\u5df2\u5bfc\u5165\u97f3\u4e50\uff1a$songName", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun resolveDisplayName(uri: Uri): String? {
+        return contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (cursor.moveToFirst() && nameIndex >= 0) cursor.getString(nameIndex) else null
+        }
     }
 
     private class SelectedEffectsAdapter(
@@ -378,6 +469,69 @@ class PlanEditorActivity : AppCompatActivity() {
         class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             val tvName: TextView = view.findViewById(R.id.tvAvailableEffectName)
             val btnAdd: Button = view.findViewById(R.id.btnAddEffect)
+        }
+    }
+
+    private class PageTextAdapter(
+        private val getDefaultTitle: () -> String,
+        private val getDefaultSubtitle: () -> String,
+        private val onPageTextChanged: (Int, String, String) -> Unit
+    ) : RecyclerView.Adapter<PageTextAdapter.ViewHolder>() {
+
+        private var types: List<EffectType> = emptyList()
+        private var items: List<PlanPageText> = emptyList()
+
+        fun submitList(newTypes: List<EffectType>, newItems: List<PlanPageText>) {
+            types = newTypes
+            items = newItems
+            notifyDataSetChanged()
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_page_text, parent, false)
+            return ViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            holder.bind(position, types[position], items.getOrNull(position) ?: PlanPageText())
+        }
+
+        override fun getItemCount(): Int = minOf(types.size, items.size)
+
+        inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            private val tvPageLabel: TextView = view.findViewById(R.id.tvPageLabel)
+            private val etPageTitle: EditText = view.findViewById(R.id.etPageTitle)
+            private val etPageSubtitle: EditText = view.findViewById(R.id.etPageSubtitle)
+
+            fun bind(position: Int, type: EffectType, pageText: PlanPageText) {
+                tvPageLabel.text = "\u7b2c ${position + 1} \u9875\u00b7${effectLabel(type)}"
+
+                etPageTitle.setOnFocusChangeListener(null)
+                etPageSubtitle.setOnFocusChangeListener(null)
+                etPageTitle.setText(pageText.title)
+                etPageSubtitle.setText(pageText.subtitle)
+                etPageTitle.hint = if (getDefaultTitle().isBlank()) {
+                    "\u8be5\u9875\u4e3b\u6807\u9898\uff08\u53ef\u9009\uff09"
+                } else {
+                    "\u9ed8\u8ba4\uff1a${getDefaultTitle()}"
+                }
+                etPageSubtitle.hint = if (getDefaultSubtitle().isBlank()) {
+                    "\u8be5\u9875\u526f\u6807\u9898\uff08\u53ef\u9009\uff09"
+                } else {
+                    "\u9ed8\u8ba4\uff1a${getDefaultSubtitle()}"
+                }
+
+                val saveBack = {
+                    onPageTextChanged(
+                        position,
+                        etPageTitle.text.toString().trim(),
+                        etPageSubtitle.text.toString().trim()
+                    )
+                }
+                etPageTitle.setOnFocusChangeListener { _, hasFocus -> if (!hasFocus) saveBack() }
+                etPageSubtitle.setOnFocusChangeListener { _, hasFocus -> if (!hasFocus) saveBack() }
+            }
         }
     }
 }
