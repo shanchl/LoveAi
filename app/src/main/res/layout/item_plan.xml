@@ -105,4 +105,24 @@
             android:text="&#21024;&#38500;" />
     </LinearLayout>
 
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnExportPlan"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="&#23548;&#20986;&#22270;" />
+
+        <Button
+            android:id="@+id/btnSharePlan"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="&#20998;&#20139;&#23553;&#38754;" />
+    </LinearLayout>
+
 </LinearLayout>

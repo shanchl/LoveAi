@@ -143,6 +143,12 @@ class PlanLibraryActivity : AppCompatActivity() {
                 repository.deletePlan(plan.id)
                 loadPlans()
                 Toast.makeText(this, "\u65b9\u6848\u5df2\u5220\u9664", Toast.LENGTH_SHORT).show()
+            },
+            onExport = { plan ->
+                exportPlanArtwork(plan)
+            },
+            onShare = { plan ->
+                sharePlanArtwork(plan)
             }
         )
 
@@ -165,12 +171,50 @@ class PlanLibraryActivity : AppCompatActivity() {
         tvStats.text = "\u5171 ${plans.size} \u4e2a\u65b9\u6848"
     }
 
+    private fun exportPlanArtwork(plan: LovePlan) {
+        runCatching {
+            val songName = MusicManager.getPlaylist().firstOrNull { it.key == plan.songKey }?.name
+            val exported = PlanArtworkExporter.exportPoster(this, plan, songName)
+            Toast.makeText(
+                this,
+                "\u5df2\u5bfc\u51fa\u5230\uff1a${exported.file.absolutePath}",
+                Toast.LENGTH_LONG
+            ).show()
+        }.onFailure {
+            Toast.makeText(this, "\u5bfc\u51fa\u5931\u8d25", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun sharePlanArtwork(plan: LovePlan) {
+        runCatching {
+            val songName = MusicManager.getPlaylist().firstOrNull { it.key == plan.songKey }?.name
+            val exported = PlanArtworkExporter.exportPoster(this, plan, songName)
+            val uri = PlanArtworkExporter.buildShareUri(this, exported.file)
+            startActivity(
+                Intent.createChooser(
+                    Intent(Intent.ACTION_SEND).apply {
+                        type = "image/png"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        putExtra(Intent.EXTRA_SUBJECT, plan.name)
+                        putExtra(Intent.EXTRA_TEXT, plan.title)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    },
+                    "\u5206\u4eab\u65b9\u6848\u5c01\u9762"
+                )
+            )
+        }.onFailure {
+            Toast.makeText(this, "\u5206\u4eab\u5931\u8d25", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private class PlanAdapter(
         private val resolveSongName: (String?) -> String?,
         private val onOpen: (LovePlan) -> Unit,
         private val onEdit: (LovePlan) -> Unit,
         private val onDuplicate: (LovePlan) -> Unit,
-        private val onDelete: (LovePlan) -> Unit
+        private val onDelete: (LovePlan) -> Unit,
+        private val onExport: (LovePlan) -> Unit,
+        private val onShare: (LovePlan) -> Unit
     ) : RecyclerView.Adapter<PlanAdapter.ViewHolder>() {
 
         private var items: List<LovePlan> = emptyList()
@@ -227,6 +271,8 @@ class PlanLibraryActivity : AppCompatActivity() {
             holder.btnEdit.setOnClickListener { onEdit(plan) }
             holder.btnDuplicate.setOnClickListener { onDuplicate(plan) }
             holder.btnDelete.setOnClickListener { onDelete(plan) }
+            holder.btnExport.setOnClickListener { onExport(plan) }
+            holder.btnShare.setOnClickListener { onShare(plan) }
         }
 
         override fun getItemCount(): Int = items.size
@@ -243,6 +289,8 @@ class PlanLibraryActivity : AppCompatActivity() {
             val btnEdit: Button = view.findViewById(R.id.btnEditPlan)
             val btnDuplicate: Button = view.findViewById(R.id.btnDuplicatePlan)
             val btnDelete: Button = view.findViewById(R.id.btnDeletePlan)
+            val btnExport: Button = view.findViewById(R.id.btnExportPlan)
+            val btnShare: Button = view.findViewById(R.id.btnSharePlan)
         }
 
         companion object {
