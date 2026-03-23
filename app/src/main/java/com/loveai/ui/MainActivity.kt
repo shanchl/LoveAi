@@ -209,6 +209,7 @@ class MainActivity : AppCompatActivity() {
 
         val planId = intent.getStringExtra(EXTRA_PLAN_ID) ?: return
         val plan = planRepository.getPlanById(planId) ?: return
+        planRepository.markPlanOpened(plan.id)
         viewModel.loadPlan(plan)
         applyPlanMusic(plan.songKey)
     }

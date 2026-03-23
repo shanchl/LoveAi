@@ -11,22 +11,69 @@
         android:layout_height="wrap_content"
         android:text="&#25105;&#30340;&#26041;&#26696;"
         android:textColor="#FFFFFF"
-        android:textSize="24sp"
+        android:textSize="26sp"
         android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="&#25628;&#32034;&#12289;&#31579;&#36873;&#12289;&#31649;&#29702;&#20320;&#30340;&#28010;&#28459;&#20316;&#21697;"
+        android:textColor="#CCFFFFFF"
+        android:textSize="14sp" />
 
     <Button
         android:id="@+id/btnCreatePlan"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="14dp"
         android:text="&#26032;&#24314;&#26041;&#26696;" />
+
+    <EditText
+        android:id="@+id/etSearchPlan"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:background="#26FFFFFF"
+        android:hint="&#25628;&#32034;&#26041;&#26696;&#21517;&#25110;&#25991;&#26696;"
+        android:padding="14dp"
+        android:textColor="#FFFFFF"
+        android:textColorHint="#88FFFFFF" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal">
+
+        <Spinner
+            android:id="@+id/spThemeFilter"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+
+        <Spinner
+            android:id="@+id/spSortMode"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvPlanStats"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:textColor="#FFCFD8"
+        android:textSize="13sp" />
 
     <TextView
         android:id="@+id/tvEmptyPlans"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:text="&#36824;&#27809;&#26377;&#20445;&#23384;&#30340;&#26041;&#26696;"
+        android:text="&#36824;&#27809;&#26377;&#31526;&#21512;&#26465;&#20214;&#30340;&#26041;&#26696;"
         android:textColor="#CCFFFFFF"
         android:visibility="gone" />
 
@@ -35,6 +82,8 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="16dp"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingBottom="24dp" />
 
 </LinearLayout>

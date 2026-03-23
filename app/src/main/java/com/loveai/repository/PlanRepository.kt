@@ -18,6 +18,12 @@ class PlanRepository(context: Context) {
         private const val MAX_EFFECT_COUNT = 8
     }
 
+    enum class SortMode {
+        RECENT,
+        CREATED,
+        NAME
+    }
+
     fun getAllPlans(): List<LovePlan> {
         val raw = prefs.getString(KEY_PLANS, "[]") ?: "[]"
         val array = JSONArray(raw)
@@ -43,6 +49,7 @@ class PlanRepository(context: Context) {
         existingId: String? = null
     ): LovePlan {
         val plans = getAllPlans().toMutableList()
+        val existingPlan = existingId?.let { id -> plans.firstOrNull { it.id == id } }
         val plan = LovePlan(
             id = existingId ?: UUID.randomUUID().toString(),
             name = name.ifBlank { "\u6211\u7684\u65b9\u6848" },
@@ -51,7 +58,9 @@ class PlanRepository(context: Context) {
             effectTypes = effectTypes.take(MAX_EFFECT_COUNT),
             themeKey = themeKey,
             songKey = songKey,
-            createdAt = System.currentTimeMillis()
+            createdAt = existingPlan?.createdAt ?: System.currentTimeMillis(),
+            lastOpenedAt = existingPlan?.lastOpenedAt ?: 0L,
+            playCount = existingPlan?.playCount ?: 0
         )
 
         val existingIndex = plans.indexOfFirst { it.id == plan.id }
@@ -69,6 +78,62 @@ class PlanRepository(context: Context) {
         persistPlans(updated)
     }
 
+    fun duplicatePlan(id: String): LovePlan? {
+        val original = getPlanById(id) ?: return null
+        return savePlan(
+            name = "${original.name} \u526f\u672c",
+            title = original.title,
+            subtitle = original.subtitle,
+            effectTypes = original.effectTypes,
+            themeKey = original.themeKey,
+            songKey = original.songKey
+        )
+    }
+
+    fun markPlanOpened(id: String) {
+        val plans = getAllPlans().toMutableList()
+        val index = plans.indexOfFirst { it.id == id }
+        if (index < 0) return
+
+        val target = plans[index]
+        plans[index] = target.copy(
+            lastOpenedAt = System.currentTimeMillis(),
+            playCount = target.playCount + 1
+        )
+        persistPlans(plans)
+    }
+
+    fun queryPlans(
+        keyword: String = "",
+        themeKey: String? = null,
+        sortMode: SortMode = SortMode.RECENT
+    ): List<LovePlan> {
+        val normalizedKeyword = keyword.trim()
+        return getAllPlans()
+            .asSequence()
+            .filter { plan ->
+                themeKey.isNullOrBlank() || plan.themeKey == themeKey
+            }
+            .filter { plan ->
+                normalizedKeyword.isBlank() ||
+                    plan.name.contains(normalizedKeyword, ignoreCase = true) ||
+                    plan.title.contains(normalizedKeyword, ignoreCase = true) ||
+                    plan.subtitle.contains(normalizedKeyword, ignoreCase = true)
+            }
+            .sortedWith(sortComparator(sortMode))
+            .toList()
+    }
+
+    private fun sortComparator(sortMode: SortMode): Comparator<LovePlan> {
+        return when (sortMode) {
+            SortMode.RECENT -> compareByDescending<LovePlan> {
+                if (it.lastOpenedAt > 0L) it.lastOpenedAt else it.createdAt
+            }.thenByDescending { it.createdAt }
+            SortMode.CREATED -> compareByDescending<LovePlan> { it.createdAt }
+            SortMode.NAME -> compareBy<LovePlan> { it.name.lowercase() }
+        }
+    }
+
     private fun persistPlans(plans: List<LovePlan>) {
         val array = JSONArray()
         plans.forEach { plan ->
@@ -81,6 +146,8 @@ class PlanRepository(context: Context) {
                     put("themeKey", plan.themeKey)
                     put("songKey", plan.songKey)
                     put("createdAt", plan.createdAt)
+                    put("lastOpenedAt", plan.lastOpenedAt)
+                    put("playCount", plan.playCount)
                     put(
                         "effectTypes",
                         JSONArray().apply {
@@ -110,7 +177,9 @@ class PlanRepository(context: Context) {
             effectTypes = types.take(MAX_EFFECT_COUNT),
             themeKey = obj.optString("themeKey").ifBlank { null },
             songKey = obj.optString("songKey").ifBlank { null },
-            createdAt = obj.optLong("createdAt")
+            createdAt = obj.optLong("createdAt"),
+            lastOpenedAt = obj.optLong("lastOpenedAt"),
+            playCount = obj.optInt("playCount")
         )
     }
 }

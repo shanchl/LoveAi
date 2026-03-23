@@ -8,5 +8,7 @@ data class LovePlan(
     val effectTypes: List<EffectType>,
     val themeKey: String? = null,
     val songKey: String? = null,
-    val createdAt: Long
+    val createdAt: Long,
+    val lastOpenedAt: Long = 0L,
+    val playCount: Int = 0
 )
