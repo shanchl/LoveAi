@@ -14,7 +14,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.loveai.R
 import com.loveai.manager.MusicManager
 import com.loveai.model.FavoriteSequence
+import com.loveai.repository.EffectRepository
 import com.loveai.repository.FavoriteRepository
+import com.loveai.repository.PlanRepository
 import com.loveai.viewmodel.LoveViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -24,9 +26,11 @@ class FavoriteActivity : AppCompatActivity() {
 
     private lateinit var viewModel: LoveViewModel
     private lateinit var repository: FavoriteRepository
+    private lateinit var planRepository: PlanRepository
     private lateinit var recyclerView: RecyclerView
     private lateinit var tvEmpty: TextView
     private lateinit var adapter: FavoriteAdapter
+    private val effectRepository = EffectRepository()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,6 +38,7 @@ class FavoriteActivity : AppCompatActivity() {
 
         viewModel = ViewModelProvider(this)[LoveViewModel::class.java]
         repository = FavoriteRepository(this)
+        planRepository = PlanRepository(this)
         MusicManager.ensurePlaylist(this)
 
         initViews()
@@ -53,6 +58,21 @@ class FavoriteActivity : AppCompatActivity() {
                 startActivity(
                     Intent(this, MainActivity::class.java).apply {
                         putExtra(MainActivity.EXTRA_FAVORITE_ID, favorite.id)
+                    }
+                )
+            },
+            onEdit = { favorite ->
+                val plan = planRepository.savePlan(
+                    name = "${favorite.name} \u7f16\u8f91\u7a3f",
+                    title = favorite.title,
+                    subtitle = favorite.subtitle,
+                    effectTypes = effectRepository.getEffectTypesByVariantIds(favorite.effectVariantIds),
+                    tags = favorite.tags,
+                    songKey = favorite.songKey
+                )
+                startActivity(
+                    Intent(this, PlanEditorActivity::class.java).apply {
+                        putExtra(PlanEditorActivity.EXTRA_PLAN_ID, plan.id)
                     }
                 )
             },
@@ -80,6 +100,7 @@ class FavoriteActivity : AppCompatActivity() {
     private class FavoriteAdapter(
         private val resolveSongName: (String?) -> String?,
         private val onOpen: (FavoriteSequence) -> Unit,
+        private val onEdit: (FavoriteSequence) -> Unit,
         private val onDelete: (FavoriteSequence) -> Unit
     ) : RecyclerView.Adapter<FavoriteAdapter.FavoriteViewHolder>() {
 
@@ -107,7 +128,9 @@ class FavoriteActivity : AppCompatActivity() {
         inner class FavoriteViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             private val tvFavoriteName: TextView = itemView.findViewById(R.id.tvFavoriteName)
             private val tvFavoriteSummary: TextView = itemView.findViewById(R.id.tvFavoriteSummary)
+            private val tvFavoriteTags: TextView = itemView.findViewById(R.id.tvFavoriteTags)
             private val btnOpenFavorite: Button = itemView.findViewById(R.id.btnOpenFavorite)
+            private val btnEditFavorite: Button = itemView.findViewById(R.id.btnEditFavorite)
             private val btnDeleteFavorite: Button = itemView.findViewById(R.id.btnDeleteFavorite)
 
             fun bind(favorite: FavoriteSequence) {
@@ -131,8 +154,14 @@ class FavoriteActivity : AppCompatActivity() {
                         }
                     }
                 }
+                tvFavoriteTags.text = if (favorite.tags.isEmpty()) {
+                    "\u672a\u8bbe\u7f6e\u6807\u7b7e"
+                } else {
+                    favorite.tags.joinToString("  #", prefix = "#")
+                }
 
                 btnOpenFavorite.setOnClickListener { onOpen(favorite) }
+                btnEditFavorite.setOnClickListener { onEdit(favorite) }
                 btnDeleteFavorite.setOnClickListener { onDelete(favorite) }
             }
         }

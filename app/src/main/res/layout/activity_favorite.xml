@@ -20,7 +20,7 @@
             android:layout_width="44dp"
             android:layout_height="44dp"
             android:background="@drawable/bg_circle_button"
-            android:contentDescription="返回"
+            android:contentDescription="&#36820;&#22238;"
             android:padding="10dp"
             android:src="@drawable/ic_back"
             android:tint="#FFFFFF" />
@@ -41,7 +41,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:gravity="center"
-        android:text="还没有收藏的动态"
+        android:text="&#36824;&#27809;&#26377;&#25910;&#34255;&#30340;&#21160;&#24577;"
         android:textColor="#FFB7C5"
         android:textSize="16sp"
         android:visibility="gone" />

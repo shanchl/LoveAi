@@ -23,6 +23,14 @@
         android:textColor="#CCFFFFFF"
         android:textSize="14sp" />
 
+    <TextView
+        android:id="@+id/tvFavoriteTags"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="#FFD7E8"
+        android:textSize="12sp" />
+
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -34,6 +42,13 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="&#25171;&#24320;" />
+
+        <Button
+            android:id="@+id/btnEditFavorite"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="&#32534;&#36753;" />
 
         <Button
             android:id="@+id/btnDeleteFavorite"

@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
@@ -17,6 +18,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.loveai.R
 import com.loveai.manager.MusicManager
 import com.loveai.model.EffectType
+import com.loveai.model.PlanCover
 import com.loveai.model.PlanTheme
 import com.loveai.repository.PlanRepository
 
@@ -29,9 +31,12 @@ class PlanEditorActivity : AppCompatActivity() {
     private lateinit var etPlanName: EditText
     private lateinit var etTitle: EditText
     private lateinit var etSubtitle: EditText
+    private lateinit var etTags: EditText
     private lateinit var spTheme: Spinner
+    private lateinit var spCover: Spinner
     private lateinit var spSong: Spinner
     private lateinit var tvThemeHint: TextView
+    private lateinit var tvCoverHint: TextView
     private lateinit var rvSelected: RecyclerView
     private lateinit var rvAvailable: RecyclerView
     private lateinit var btnSave: Button
@@ -45,6 +50,7 @@ class PlanEditorActivity : AppCompatActivity() {
     private val selectedTypes = mutableListOf<EffectType>()
     private val allTypes = EffectType.values().toList()
     private val themes = listOf<PlanTheme?>(null) + PlanTheme.values().toList()
+    private val covers = listOf<PlanCover?>(null) + PlanCover.values().toList()
     private val minEffectCount = 5
     private val maxEffectCount = 8
     private var songs: List<MusicManager.Song> = emptyList()
@@ -60,6 +66,7 @@ class PlanEditorActivity : AppCompatActivity() {
         initViews()
         initLists()
         initThemeSelector()
+        initCoverSelector()
         initSongSelector()
         loadPlanIfNeeded()
     }
@@ -68,9 +75,12 @@ class PlanEditorActivity : AppCompatActivity() {
         etPlanName = findViewById(R.id.etPlanName)
         etTitle = findViewById(R.id.etTitle)
         etSubtitle = findViewById(R.id.etSubtitle)
+        etTags = findViewById(R.id.etTags)
         spTheme = findViewById(R.id.spTheme)
+        spCover = findViewById(R.id.spCover)
         spSong = findViewById(R.id.spSong)
         tvThemeHint = findViewById(R.id.tvThemeHint)
+        tvCoverHint = findViewById(R.id.tvCoverHint)
         rvSelected = findViewById(R.id.rvSelectedEffects)
         rvAvailable = findViewById(R.id.rvAvailableEffects)
         btnSave = findViewById(R.id.btnSavePlan)
@@ -91,7 +101,21 @@ class PlanEditorActivity : AppCompatActivity() {
         }
         spTheme.adapter = themeAdapter
         spTheme.setSelection(0)
+        spTheme.onItemSelectedListener = HintSelectedListener { updateThemeHint() }
         updateThemeHint()
+    }
+
+    private fun initCoverSelector() {
+        val labels = covers.map { cover ->
+            cover?.label ?: "\u8ddf\u968f\u4e3b\u9898\u9ed8\u8ba4"
+        }
+        val coverAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, labels).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+        spCover.adapter = coverAdapter
+        spCover.setSelection(0)
+        spCover.onItemSelectedListener = HintSelectedListener { updateCoverHint() }
+        updateCoverHint()
     }
 
     private fun initSongSelector() {
@@ -162,6 +186,7 @@ class PlanEditorActivity : AppCompatActivity() {
         etPlanName.setText(plan.name)
         etTitle.setText(plan.title)
         etSubtitle.setText(plan.subtitle)
+        etTags.setText(plan.tags.joinToString("\uff0c"))
         selectedTypes.clear()
         selectedTypes.addAll(plan.effectTypes)
         refreshLists()
@@ -169,6 +194,10 @@ class PlanEditorActivity : AppCompatActivity() {
         val themeIndex = themes.indexOfFirst { it?.key == plan.themeKey }.takeIf { it >= 0 } ?: 0
         spTheme.setSelection(themeIndex)
         updateThemeHint()
+
+        val coverIndex = covers.indexOfFirst { it?.key == plan.coverKey }.takeIf { it >= 0 } ?: 0
+        spCover.setSelection(coverIndex)
+        updateCoverHint()
 
         val songIndex = songs.indexOfFirst { it.key == (plan.songKey ?: "") }.takeIf { it >= 0 } ?: 0
         spSong.setSelection(songIndex)
@@ -185,13 +214,26 @@ class PlanEditorActivity : AppCompatActivity() {
         }
         etTitle.setText(theme.defaultTitle)
         etSubtitle.setText(theme.defaultSubtitle)
+        if (etTags.text.isNullOrBlank()) {
+            etTags.setText(theme.label)
+        }
         selectedTypes.clear()
         selectedTypes.addAll(theme.recommendedEffects)
+        val suggestedCover = when (theme) {
+            PlanTheme.CONFESSION -> PlanCover.BLUSH
+            PlanTheme.ANNIVERSARY -> PlanCover.BLOOM
+            PlanTheme.BIRTHDAY -> PlanCover.SUNSET
+            PlanTheme.LONG_DISTANCE -> PlanCover.OCEAN
+        }
+        val coverIndex = covers.indexOfFirst { it == suggestedCover }.takeIf { it >= 0 } ?: 0
+        spCover.setSelection(coverIndex)
         refreshLists()
         updateThemeHint()
+        updateCoverHint()
     }
 
     private fun getSelectedTheme(): PlanTheme? = themes.getOrNull(spTheme.selectedItemPosition)
+    private fun getSelectedCover(): PlanCover? = covers.getOrNull(spCover.selectedItemPosition)
 
     private fun getSelectedSongKey(): String? {
         val song = songs.getOrNull(spSong.selectedItemPosition) ?: return null
@@ -216,6 +258,22 @@ class PlanEditorActivity : AppCompatActivity() {
         }
     }
 
+    private fun updateCoverHint() {
+        val cover = getSelectedCover()
+        tvCoverHint.text = if (cover == null) {
+            "\u4e0d\u5355\u72ec\u6307\u5b9a\u5c01\u9762\u65f6\uff0c\u65b9\u6848\u5e93\u4f1a\u6839\u636e\u4e3b\u9898\u81ea\u52a8\u751f\u6210\u5c01\u9762\u914d\u8272\u3002"
+        } else {
+            "${cover.label} \u00b7 ${cover.description}"
+        }
+    }
+
+    private fun parseTags(): List<String> {
+        return etTags.text.toString()
+            .split(',', '\uff0c')
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+    }
+
     private fun savePlan() {
         if (selectedTypes.size !in minEffectCount..maxEffectCount) {
             Toast.makeText(
@@ -232,6 +290,8 @@ class PlanEditorActivity : AppCompatActivity() {
             subtitle = etSubtitle.text.toString().trim(),
             effectTypes = selectedTypes,
             themeKey = getSelectedTheme()?.key,
+            coverKey = getSelectedCover()?.key,
+            tags = parseTags(),
             songKey = getSelectedSongKey(),
             existingId = editingPlanId
         )
@@ -337,4 +397,19 @@ private fun effectLabel(type: EffectType): String {
         EffectType.BUTTERFLY -> "\u8774\u8776"
         EffectType.AURORA -> "\u6781\u5149"
     }
+}
+
+private class HintSelectedListener(
+    private val onSelected: () -> Unit
+) : AdapterView.OnItemSelectedListener {
+    override fun onItemSelected(
+        parent: AdapterView<*>?,
+        view: View?,
+        position: Int,
+        id: Long
+    ) {
+        onSelected()
+    }
+
+    override fun onNothingSelected(parent: AdapterView<*>?) = Unit
 }

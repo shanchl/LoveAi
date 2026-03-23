@@ -142,6 +142,7 @@ class LoveViewModel(application: Application) : AndroidViewModel(application) {
             effectVariantIds = variantIds,
             title = firstEffect.message,
             subtitle = firstEffect.subMessage,
+            tags = activePlan?.tags ?: activeFavoriteSequence?.tags ?: emptyList(),
             songKey = MusicManager.getCurrentSongKey(),
             name = name
         )

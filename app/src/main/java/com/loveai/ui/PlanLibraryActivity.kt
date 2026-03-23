@@ -23,6 +23,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.loveai.R
 import com.loveai.manager.MusicManager
 import com.loveai.model.LovePlan
+import com.loveai.model.PlanCover
 import com.loveai.model.PlanTheme
 import com.loveai.repository.PlanRepository
 import java.text.SimpleDateFormat
@@ -191,12 +192,18 @@ class PlanLibraryActivity : AppCompatActivity() {
             val theme = PlanTheme.fromKey(plan.themeKey)
             val themeLabel = theme?.label ?: "\u81ea\u5b9a\u4e49"
             val songLabel = resolveSongName(plan.songKey) ?: "\u672a\u7ed1\u5b9a\u66f2\u76ee"
+            val tagsLabel = if (plan.tags.isEmpty()) {
+                "\u672a\u8bbe\u7f6e\u6807\u7b7e"
+            } else {
+                plan.tags.joinToString("  #", prefix = "#")
+            }
 
             holder.tvPlanTheme.text = themeLabel
             holder.tvPlanCoverTitle.text = plan.title
             holder.tvName.text = plan.name
             holder.tvSummary.text =
                 "${plan.effectTypes.size} \u4e2a\u7279\u6548 \u00b7 ${themeLabel} \u00b7 ${songLabel}"
+            holder.tvTags.text = tagsLabel
             holder.tvMeta.text = buildString {
                 append("\u521b\u5efa\u4e8e ")
                 append(formatter.format(Date(plan.createdAt)))
@@ -211,7 +218,7 @@ class PlanLibraryActivity : AppCompatActivity() {
 
             holder.layoutPlanCover.background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
-                coverColors(theme)
+                coverColors(theme, PlanCover.fromKey(plan.coverKey))
             ).apply {
                 cornerRadius = 24f
             }
@@ -230,6 +237,7 @@ class PlanLibraryActivity : AppCompatActivity() {
             val tvPlanCoverTitle: TextView = view.findViewById(R.id.tvPlanCoverTitle)
             val tvName: TextView = view.findViewById(R.id.tvPlanName)
             val tvSummary: TextView = view.findViewById(R.id.tvPlanSummary)
+            val tvTags: TextView = view.findViewById(R.id.tvPlanTags)
             val tvMeta: TextView = view.findViewById(R.id.tvPlanMeta)
             val btnOpen: Button = view.findViewById(R.id.btnOpenPlan)
             val btnEdit: Button = view.findViewById(R.id.btnEditPlan)
@@ -238,7 +246,13 @@ class PlanLibraryActivity : AppCompatActivity() {
         }
 
         companion object {
-            private fun coverColors(theme: PlanTheme?): IntArray {
+            private fun coverColors(theme: PlanTheme?, cover: PlanCover?): IntArray {
+                if (cover != null) {
+                    return intArrayOf(
+                        Color.parseColor(cover.startColor),
+                        Color.parseColor(cover.endColor)
+                    )
+                }
                 return when (theme) {
                     PlanTheme.CONFESSION -> intArrayOf(
                         Color.parseColor("#FF6F91"),

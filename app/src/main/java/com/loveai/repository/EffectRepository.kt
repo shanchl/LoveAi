@@ -125,4 +125,10 @@ class EffectRepository {
             )
         }
     }
+
+    fun getEffectTypesByVariantIds(variantIds: List<Int>): List<EffectType> {
+        return variantIds.mapNotNull { variantId ->
+            EffectVariants.getVariantById(variantId)?.baseType
+        }.distinct()
+    }
 }

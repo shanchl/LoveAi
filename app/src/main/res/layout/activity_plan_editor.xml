@@ -93,6 +93,43 @@
             android:textColor="#FFFFFF"
             android:textColorHint="#88FFFFFF" />
 
+        <EditText
+            android:id="@+id/etTags"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@android:drawable/edit_text"
+            android:hint="&#26631;&#31614;&#65288;&#29992;&#39039;&#21495;&#20998;&#38548;&#65289;"
+            android:padding="12dp"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#88FFFFFF" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="&#26041;&#26696;&#23553;&#38754;"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/spCover"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="#22FFFFFF"
+            android:padding="10dp"
+            android:spinnerMode="dropdown" />
+
+        <TextView
+            android:id="@+id/tvCoverHint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="#CCFFFFFF"
+            android:textSize="13sp" />
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

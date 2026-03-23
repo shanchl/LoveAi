@@ -56,6 +56,14 @@
         android:textSize="14sp" />
 
     <TextView
+        android:id="@+id/tvPlanTags"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="#FFD7E8"
+        android:textSize="12sp" />
+
+    <TextView
         android:id="@+id/tvPlanMeta"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

@@ -7,6 +7,8 @@ data class LovePlan(
     val subtitle: String,
     val effectTypes: List<EffectType>,
     val themeKey: String? = null,
+    val coverKey: String? = null,
+    val tags: List<String> = emptyList(),
     val songKey: String? = null,
     val createdAt: Long,
     val lastOpenedAt: Long = 0L,

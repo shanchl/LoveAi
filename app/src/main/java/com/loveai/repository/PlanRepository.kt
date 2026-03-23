@@ -45,6 +45,8 @@ class PlanRepository(context: Context) {
         subtitle: String,
         effectTypes: List<EffectType>,
         themeKey: String? = null,
+        coverKey: String? = null,
+        tags: List<String> = emptyList(),
         songKey: String? = null,
         existingId: String? = null
     ): LovePlan {
@@ -57,6 +59,8 @@ class PlanRepository(context: Context) {
             subtitle = subtitle,
             effectTypes = effectTypes.take(MAX_EFFECT_COUNT),
             themeKey = themeKey,
+            coverKey = coverKey,
+            tags = tags.map { it.trim() }.filter { it.isNotBlank() }.distinct().take(6),
             songKey = songKey,
             createdAt = existingPlan?.createdAt ?: System.currentTimeMillis(),
             lastOpenedAt = existingPlan?.lastOpenedAt ?: 0L,
@@ -86,6 +90,8 @@ class PlanRepository(context: Context) {
             subtitle = original.subtitle,
             effectTypes = original.effectTypes,
             themeKey = original.themeKey,
+            coverKey = original.coverKey,
+            tags = original.tags,
             songKey = original.songKey
         )
     }
@@ -118,7 +124,8 @@ class PlanRepository(context: Context) {
                 normalizedKeyword.isBlank() ||
                     plan.name.contains(normalizedKeyword, ignoreCase = true) ||
                     plan.title.contains(normalizedKeyword, ignoreCase = true) ||
-                    plan.subtitle.contains(normalizedKeyword, ignoreCase = true)
+                    plan.subtitle.contains(normalizedKeyword, ignoreCase = true) ||
+                    plan.tags.any { it.contains(normalizedKeyword, ignoreCase = true) }
             }
             .sortedWith(sortComparator(sortMode))
             .toList()
@@ -144,10 +151,17 @@ class PlanRepository(context: Context) {
                     put("title", plan.title)
                     put("subtitle", plan.subtitle)
                     put("themeKey", plan.themeKey)
+                    put("coverKey", plan.coverKey)
                     put("songKey", plan.songKey)
                     put("createdAt", plan.createdAt)
                     put("lastOpenedAt", plan.lastOpenedAt)
                     put("playCount", plan.playCount)
+                    put(
+                        "tags",
+                        JSONArray().apply {
+                            plan.tags.forEach { put(it) }
+                        }
+                    )
                     put(
                         "effectTypes",
                         JSONArray().apply {
@@ -168,6 +182,16 @@ class PlanRepository(context: Context) {
             runCatching { EffectType.valueOf(typeName) }.getOrNull()?.let { types += it }
         }
         if (types.isEmpty()) return null
+        val tagsArray = obj.optJSONArray("tags")
+        val tags = mutableListOf<String>()
+        if (tagsArray != null) {
+            for (index in 0 until tagsArray.length()) {
+                val tag = tagsArray.optString(index).trim()
+                if (tag.isNotBlank()) {
+                    tags += tag
+                }
+            }
+        }
 
         return LovePlan(
             id = obj.optString("id"),
@@ -176,6 +200,8 @@ class PlanRepository(context: Context) {
             subtitle = obj.optString("subtitle"),
             effectTypes = types.take(MAX_EFFECT_COUNT),
             themeKey = obj.optString("themeKey").ifBlank { null },
+            coverKey = obj.optString("coverKey").ifBlank { null },
+            tags = tags,
             songKey = obj.optString("songKey").ifBlank { null },
             createdAt = obj.optLong("createdAt"),
             lastOpenedAt = obj.optLong("lastOpenedAt"),

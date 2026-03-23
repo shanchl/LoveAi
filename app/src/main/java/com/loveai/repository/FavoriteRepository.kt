@@ -42,6 +42,7 @@ class FavoriteRepository(context: Context) {
         effectVariantIds: List<Int>,
         title: String,
         subtitle: String,
+        tags: List<String> = emptyList(),
         songKey: String? = null,
         name: String? = null
     ): Boolean {
@@ -59,6 +60,7 @@ class FavoriteRepository(context: Context) {
             title = title,
             subtitle = subtitle,
             effectVariantIds = effectVariantIds,
+            tags = tags.map { it.trim() }.filter { it.isNotBlank() }.distinct().take(6),
             songKey = songKey,
             createdAt = System.currentTimeMillis()
         )
@@ -85,6 +87,12 @@ class FavoriteRepository(context: Context) {
                     put("songKey", favorite.songKey)
                     put("createdAt", favorite.createdAt)
                     put(
+                        "tags",
+                        JSONArray().apply {
+                            favorite.tags.forEach { put(it) }
+                        }
+                    )
+                    put(
                         "effectVariantIds",
                         JSONArray().apply {
                             favorite.effectVariantIds.forEach { put(it) }
@@ -106,6 +114,16 @@ class FavoriteRepository(context: Context) {
             }
         }
         if (variantIds.isEmpty()) return null
+        val tagsArray = obj.optJSONArray("tags")
+        val tags = mutableListOf<String>()
+        if (tagsArray != null) {
+            for (index in 0 until tagsArray.length()) {
+                val tag = tagsArray.optString(index).trim()
+                if (tag.isNotBlank()) {
+                    tags += tag
+                }
+            }
+        }
 
         return FavoriteSequence(
             id = obj.optString("id"),
@@ -113,6 +131,7 @@ class FavoriteRepository(context: Context) {
             title = obj.optString("title"),
             subtitle = obj.optString("subtitle"),
             effectVariantIds = variantIds,
+            tags = tags,
             songKey = obj.optString("songKey").ifBlank { null },
             createdAt = obj.optLong("createdAt")
         )

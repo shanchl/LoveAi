@@ -6,6 +6,7 @@ data class FavoriteSequence(
     val title: String,
     val subtitle: String,
     val effectVariantIds: List<Int>,
+    val tags: List<String> = emptyList(),
     val songKey: String? = null,
     val createdAt: Long
 )
