@@ -46,6 +46,8 @@ class PlanEditorActivity : AppCompatActivity() {
         const val EXTRA_GENERATED_EFFECTS = "generated_effects"
         const val EXTRA_GENERATED_PAGE_TITLES = "generated_page_titles"
         const val EXTRA_GENERATED_PAGE_SUBTITLES = "generated_page_subtitles"
+        const val EXTRA_GENERATED_PAGE_ASSET_URIS = "generated_page_asset_uris"
+        const val EXTRA_GENERATED_PAGE_ASSET_NAMES = "generated_page_asset_names"
     }
 
     private lateinit var etPlanName: EditText
@@ -335,6 +337,8 @@ class PlanEditorActivity : AppCompatActivity() {
             .take(maxEffectCount)
         val pageTitles = intent.getStringArrayListExtra(EXTRA_GENERATED_PAGE_TITLES).orEmpty()
         val pageSubtitles = intent.getStringArrayListExtra(EXTRA_GENERATED_PAGE_SUBTITLES).orEmpty()
+        val pageAssetUris = intent.getStringArrayListExtra(EXTRA_GENERATED_PAGE_ASSET_URIS).orEmpty()
+        val pageAssetNames = intent.getStringArrayListExtra(EXTRA_GENERATED_PAGE_ASSET_NAMES).orEmpty()
 
         selectedTypes.clear()
         selectedTypes.addAll(generatedEffects)
@@ -342,7 +346,9 @@ class PlanEditorActivity : AppCompatActivity() {
         repeat(generatedEffects.size) { index ->
             pageTexts += PlanPageText(
                 title = pageTitles.getOrNull(index).orEmpty(),
-                subtitle = pageSubtitles.getOrNull(index).orEmpty()
+                subtitle = pageSubtitles.getOrNull(index).orEmpty(),
+                assetUri = pageAssetUris.getOrNull(index),
+                assetName = pageAssetNames.getOrNull(index)
             )
         }
 

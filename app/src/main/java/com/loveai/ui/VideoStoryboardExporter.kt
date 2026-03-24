@@ -116,4 +116,20 @@ object VideoStoryboardExporter {
             scenes = scenes
         )
     }
+
+    fun updateSceneDuration(file: File, order: Int, durationMs: Long): Boolean {
+        if (!file.exists()) return false
+        val json = runCatching { JSONObject(file.readText(Charsets.UTF_8)) }.getOrNull() ?: return false
+        val scenes = json.optJSONArray("scenes") ?: return false
+        for (index in 0 until scenes.length()) {
+            val item = scenes.optJSONObject(index) ?: continue
+            val itemOrder = item.optInt("order").takeIf { it > 0 } ?: (index + 1)
+            if (itemOrder == order) {
+                item.put("durationMs", durationMs.coerceAtLeast(5000L))
+                file.writeText(json.toString(2), Charsets.UTF_8)
+                return true
+            }
+        }
+        return false
+    }
 }

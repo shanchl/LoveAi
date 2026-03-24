@@ -40,5 +40,25 @@
             android:layout_marginTop="4dp"
             android:textColor="#CCFFFFFF"
             android:textSize="12sp" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnTimelineShorter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="-5s" />
+
+            <Button
+                android:id="@+id/btnTimelineLonger"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="+5s" />
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>

@@ -83,6 +83,21 @@
             android:textColor="#FFFFFF"
             android:textColorHint="#88FFFFFF" />
 
+        <Button
+            android:id="@+id/btnPickSmartImages"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="&#23548;&#20837;&#21442;&#32771;&#22270;" />
+
+        <TextView
+            android:id="@+id/tvSmartInspiration"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="#CCFFFFFF"
+            android:textSize="12sp" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

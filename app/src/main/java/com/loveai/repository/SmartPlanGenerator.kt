@@ -14,16 +14,19 @@ class SmartPlanGenerator {
         tone: GenerationTone,
         keywords: String,
         relation: String,
-        pageCount: Int
+        pageCount: Int,
+        inspirationNames: List<String> = emptyList()
     ): GeneratedPlanDraft {
         val normalizedKeywords = keywords
             .split(' ', ',', '\uff0c', '\n')
             .map { it.trim() }
             .filter { it.isNotBlank() }
             .distinct()
+        val inspirationKeywords = inspirationNames.map { it.substringBeforeLast('.') }.map { it.trim() }
+            .filter { it.isNotBlank() }
         val themeLabel = theme?.label ?: "\u81ea\u5b9a\u4e49"
         val relationLabel = relation.ifBlank { "\u4f60" }
-        val keywordLead = normalizedKeywords.take(2).joinToString("\u3001")
+        val keywordLead = (normalizedKeywords + inspirationKeywords).take(2).joinToString("\u3001")
 
         val planName = when (tone) {
             GenerationTone.SWEET -> "${themeLabel}\u751c\u871c\u65b9\u6848"
@@ -56,7 +59,7 @@ class SmartPlanGenerator {
                 type = type,
                 tone = tone,
                 relation = relationLabel,
-                keywords = normalizedKeywords
+                keywords = normalizedKeywords + inspirationKeywords
             )
         }
 
@@ -79,7 +82,7 @@ class SmartPlanGenerator {
             subtitle = subtitle,
             themeKey = theme?.key,
             coverKey = cover.key,
-            tags = (listOf(themeLabel, tone.label) + normalizedKeywords).distinct().take(6),
+            tags = (listOf(themeLabel, tone.label) + normalizedKeywords + inspirationKeywords).distinct().take(6),
             effectTypes = baseEffects,
             pageTexts = pageTexts
         )

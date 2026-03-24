@@ -24,6 +24,7 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
     private lateinit var tvEmpty: TextView
     private lateinit var rvScenes: RecyclerView
     private lateinit var adapter: SceneAdapter
+    private var filePath: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,7 +35,10 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
         tvTags = findViewById(R.id.tvTimelineTags)
         tvEmpty = findViewById(R.id.tvTimelineEmpty)
         rvScenes = findViewById(R.id.rvTimelineScenes)
-        adapter = SceneAdapter()
+        adapter = SceneAdapter(
+            onShorter = { scene -> updateSceneDuration(scene.order, scene.durationMs - 5000L) },
+            onLonger = { scene -> updateSceneDuration(scene.order, scene.durationMs + 5000L) }
+        )
 
         rvScenes.layoutManager = LinearLayoutManager(this)
         rvScenes.adapter = adapter
@@ -45,6 +49,7 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
 
     private fun loadPreview() {
         val path = intent.getStringExtra(EXTRA_FILE_PATH)
+        filePath = path
         val preview = path?.let { VideoStoryboardExporter.parsePreview(File(it)) }
         if (preview == null) {
             tvPlanName.text = "\u65e0\u6cd5\u6253\u5f00\u9884\u89c8"
@@ -78,7 +83,18 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
         tvEmpty.visibility = if (hasScenes) View.GONE else View.VISIBLE
     }
 
-    private class SceneAdapter : RecyclerView.Adapter<SceneAdapter.ViewHolder>() {
+    private fun updateSceneDuration(order: Int, durationMs: Long) {
+        val path = filePath ?: return
+        val file = File(path)
+        if (VideoStoryboardExporter.updateSceneDuration(file, order, durationMs)) {
+            loadPreview()
+        }
+    }
+
+    private class SceneAdapter(
+        private val onShorter: (VideoStoryboardExporter.StoryboardScene) -> Unit,
+        private val onLonger: (VideoStoryboardExporter.StoryboardScene) -> Unit
+    ) : RecyclerView.Adapter<SceneAdapter.ViewHolder>() {
         private var items: List<VideoStoryboardExporter.StoryboardScene> = emptyList()
 
         fun submitList(newItems: List<VideoStoryboardExporter.StoryboardScene>) {
@@ -110,6 +126,9 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
                     append(item.subtitle)
                 }
             }
+            holder.btnShorter.isEnabled = item.durationMs > 5000L
+            holder.btnShorter.setOnClickListener { onShorter(item) }
+            holder.btnLonger.setOnClickListener { onLonger(item) }
         }
 
         override fun getItemCount(): Int = items.size
@@ -118,6 +137,8 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
             val tvOrder: TextView = view.findViewById(R.id.tvTimelineOrder)
             val tvTitle: TextView = view.findViewById(R.id.tvTimelineSceneTitle)
             val tvMeta: TextView = view.findViewById(R.id.tvTimelineSceneMeta)
+            val btnShorter: Button = view.findViewById(R.id.btnTimelineShorter)
+            val btnLonger: Button = view.findViewById(R.id.btnTimelineLonger)
         }
     }
 }
