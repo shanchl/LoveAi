@@ -1,5 +1,6 @@
 package com.loveai.ui
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -30,7 +31,14 @@ class VideoExportCenterActivity : AppCompatActivity() {
         repository = VideoExportRepository(this)
         rvTasks = findViewById(R.id.rvVideoTasks)
         tvEmpty = findViewById(R.id.tvEmptyVideoTasks)
-        adapter = TaskAdapter()
+        adapter = TaskAdapter { task ->
+            if (task.outputPath.isNullOrBlank()) return@TaskAdapter
+            startActivity(
+                Intent(this, VideoTimelinePreviewActivity::class.java).apply {
+                    putExtra(VideoTimelinePreviewActivity.EXTRA_FILE_PATH, task.outputPath)
+                }
+            )
+        }
 
         rvTasks.layoutManager = LinearLayoutManager(this)
         rvTasks.adapter = adapter
@@ -46,7 +54,9 @@ class VideoExportCenterActivity : AppCompatActivity() {
         tvEmpty.visibility = if (hasData) View.GONE else View.VISIBLE
     }
 
-    private class TaskAdapter : RecyclerView.Adapter<TaskAdapter.ViewHolder>() {
+    private class TaskAdapter(
+        private val onOpenPreview: (VideoExportTask) -> Unit
+    ) : RecyclerView.Adapter<TaskAdapter.ViewHolder>() {
         private val formatter = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
         private var items: List<VideoExportTask> = emptyList()
 
@@ -79,6 +89,8 @@ class VideoExportCenterActivity : AppCompatActivity() {
                     append(item.note)
                 }
             }
+            holder.btnOpenPreview.isEnabled = !item.outputPath.isNullOrBlank()
+            holder.btnOpenPreview.setOnClickListener { onOpenPreview(item) }
         }
 
         override fun getItemCount(): Int = items.size
@@ -86,6 +98,7 @@ class VideoExportCenterActivity : AppCompatActivity() {
         class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             val tvTitle: TextView = view.findViewById(R.id.tvVideoTaskTitle)
             val tvMeta: TextView = view.findViewById(R.id.tvVideoTaskMeta)
+            val btnOpenPreview: Button = view.findViewById(R.id.btnOpenTimelinePreview)
         }
     }
 }

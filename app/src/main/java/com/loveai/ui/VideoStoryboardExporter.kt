@@ -17,6 +17,24 @@ object VideoStoryboardExporter {
         val sceneCount: Int
     )
 
+    data class StoryboardScene(
+        val order: Int,
+        val effectType: String,
+        val title: String,
+        val subtitle: String,
+        val assetName: String?,
+        val durationMs: Long
+    )
+
+    data class StoryboardPreview(
+        val planName: String,
+        val title: String,
+        val subtitle: String,
+        val songName: String?,
+        val tags: List<String>,
+        val scenes: List<StoryboardScene>
+    )
+
     fun export(context: Context, plan: LovePlan): ExportedStoryboard {
         val safeName = plan.name.ifBlank { "loveai_video" }
             .replace(Regex("[^a-zA-Z0-9\\u4e00-\\u9fa5_-]+"), "_")
@@ -64,5 +82,38 @@ object VideoStoryboardExporter {
 
         file.writeText(json.toString(2), Charsets.UTF_8)
         return ExportedStoryboard(file = file, sceneCount = plan.effectTypes.size)
+    }
+
+    fun parsePreview(file: File): StoryboardPreview? {
+        if (!file.exists()) return null
+        val json = runCatching { JSONObject(file.readText(Charsets.UTF_8)) }.getOrNull() ?: return null
+        val tags = mutableListOf<String>()
+        val tagsArray = json.optJSONArray("tags") ?: JSONArray()
+        for (index in 0 until tagsArray.length()) {
+            tagsArray.optString(index).takeIf { it.isNotBlank() }?.let { tags += it }
+        }
+
+        val scenes = mutableListOf<StoryboardScene>()
+        val scenesArray = json.optJSONArray("scenes") ?: JSONArray()
+        for (index in 0 until scenesArray.length()) {
+            val item = scenesArray.optJSONObject(index) ?: continue
+            scenes += StoryboardScene(
+                order = item.optInt("order").takeIf { it > 0 } ?: (index + 1),
+                effectType = item.optString("effectType"),
+                title = item.optString("title"),
+                subtitle = item.optString("subtitle"),
+                assetName = item.optString("assetName").ifBlank { null },
+                durationMs = item.optLong("durationMs").takeIf { it > 0L } ?: 10000L
+            )
+        }
+
+        return StoryboardPreview(
+            planName = json.optString("planName"),
+            title = json.optString("title"),
+            subtitle = json.optString("subtitle"),
+            songName = json.optString("songName").ifBlank { null },
+            tags = tags,
+            scenes = scenes
+        )
     }
 }

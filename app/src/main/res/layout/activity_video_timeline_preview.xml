@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#120B16"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <Button
+        android:id="@+id/btnBackTimeline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="&#36820;&#22238;" />
+
+    <TextView
+        android:id="@+id/tvTimelinePlanName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:textColor="#FFFFFF"
+        android:textSize="24sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tvTimelineSummary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="#CCFFFFFF"
+        android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/tvTimelineTags"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="#FFD7E8"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/tvTimelineEmpty"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="&#6682;&#26080;&#21487;&#39044;&#35272;&#30340;&#26102;&#38388;&#36724;&#20869;&#23481;"
+        android:textColor="#A8FFFFFF" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvTimelineScenes"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:layout_weight="1" />
+
+</LinearLayout>
