@@ -2,6 +2,7 @@ package com.loveai.repository
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.loveai.model.VideoAspectPreset
 import com.loveai.model.VideoExportStatus
 import com.loveai.model.VideoExportTask
 import org.json.JSONArray
@@ -29,14 +30,19 @@ class VideoExportRepository(context: Context) {
         return tasks.sortedByDescending { it.createdAt }
     }
 
-    fun enqueue(planId: String, planName: String): VideoExportTask {
+    fun enqueue(
+        planId: String,
+        planName: String,
+        aspectPreset: VideoAspectPreset
+    ): VideoExportTask {
         val task = VideoExportTask(
             id = UUID.randomUUID().toString(),
             planId = planId,
             planName = planName,
+            aspectPresetKey = aspectPreset.key,
             status = VideoExportStatus.QUEUED,
             createdAt = System.currentTimeMillis(),
-            note = "\u7b49\u5f85\u751f\u6210\u89c6\u9891\u811a\u672c\u5305"
+            note = "\u7b49\u5f85\u751f\u6210 ${aspectPreset.label} \u89c6\u9891\u811a\u672c\u5305"
         )
         persist((listOf(task) + getAllTasks()).take(MAX_TASKS))
         return task
@@ -59,6 +65,7 @@ class VideoExportRepository(context: Context) {
                     put("id", task.id)
                     put("planId", task.planId)
                     put("planName", task.planName)
+                    put("aspectPresetKey", task.aspectPresetKey)
                     put("status", task.status.key)
                     put("outputPath", task.outputPath)
                     put("createdAt", task.createdAt)
@@ -74,10 +81,12 @@ class VideoExportRepository(context: Context) {
         val status = VideoExportStatus.fromKey(obj.optString("status")) ?: return null
         val id = obj.optString("id")
         if (id.isBlank()) return null
+        val preset = VideoAspectPreset.fromKey(obj.optString("aspectPresetKey")) ?: VideoAspectPreset.PORTRAIT
         return VideoExportTask(
             id = id,
             planId = obj.optString("planId"),
             planName = obj.optString("planName"),
+            aspectPresetKey = preset.key,
             status = status,
             outputPath = obj.optString("outputPath").ifBlank { null },
             createdAt = obj.optLong("createdAt"),

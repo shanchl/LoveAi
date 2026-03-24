@@ -3,6 +3,7 @@ package com.loveai.ui
 import android.content.Context
 import com.loveai.manager.MusicManager
 import com.loveai.model.LovePlan
+import com.loveai.model.VideoAspectPreset
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -31,11 +32,16 @@ object VideoStoryboardExporter {
         val title: String,
         val subtitle: String,
         val songName: String?,
+        val aspectPresetLabel: String,
         val tags: List<String>,
         val scenes: List<StoryboardScene>
     )
 
-    fun export(context: Context, plan: LovePlan): ExportedStoryboard {
+    fun export(
+        context: Context,
+        plan: LovePlan,
+        aspectPreset: VideoAspectPreset = VideoAspectPreset.PORTRAIT
+    ): ExportedStoryboard {
         val safeName = plan.name.ifBlank { "loveai_video" }
             .replace(Regex("[^a-zA-Z0-9\\u4e00-\\u9fa5_-]+"), "_")
         val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
@@ -53,6 +59,9 @@ object VideoStoryboardExporter {
             put("songKey", plan.songKey)
             put("songName", MusicManager.getPlaylist().firstOrNull { it.key == plan.songKey }?.name)
             put("createdAt", System.currentTimeMillis())
+            put("aspectPresetKey", aspectPreset.key)
+            put("frameWidth", aspectPreset.width)
+            put("frameHeight", aspectPreset.height)
             put(
                 "tags",
                 JSONArray().apply {
@@ -107,11 +116,13 @@ object VideoStoryboardExporter {
             )
         }
 
+        val preset = VideoAspectPreset.fromKey(json.optString("aspectPresetKey")) ?: VideoAspectPreset.PORTRAIT
         return StoryboardPreview(
             planName = json.optString("planName"),
             title = json.optString("title"),
             subtitle = json.optString("subtitle"),
             songName = json.optString("songName").ifBlank { null },
+            aspectPresetLabel = preset.label,
             tags = tags,
             scenes = scenes
         )

@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.loveai.R
+import com.loveai.model.VideoAspectPreset
 import com.loveai.model.VideoExportTask
 import com.loveai.repository.VideoExportRepository
 import java.text.SimpleDateFormat
@@ -73,9 +74,12 @@ class VideoExportCenterActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val item = items[position]
+            val aspectLabel = VideoAspectPreset.fromKey(item.aspectPresetKey)?.label ?: item.aspectPresetKey
             holder.tvTitle.text = "${item.planName} \u00b7 ${item.status.label}"
             holder.tvMeta.text = buildString {
                 append(formatter.format(Date(item.createdAt)))
+                append(" \u00b7 ")
+                append(aspectLabel)
                 if (item.finishedAt > 0L) {
                     append(" \u00b7 ")
                     append(formatter.format(Date(item.finishedAt)))

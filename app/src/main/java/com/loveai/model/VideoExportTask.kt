@@ -4,6 +4,7 @@ data class VideoExportTask(
     val id: String,
     val planId: String,
     val planName: String,
+    val aspectPresetKey: String,
     val status: VideoExportStatus,
     val outputPath: String? = null,
     val createdAt: Long,

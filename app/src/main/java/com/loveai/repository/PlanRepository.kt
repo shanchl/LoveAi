@@ -117,6 +117,22 @@ class PlanRepository(context: Context) {
         )
     }
 
+    fun createNextVersionPlan(id: String): LovePlan? {
+        val original = getPlanById(id) ?: return null
+        return savePlan(
+            name = "${original.name} V${original.currentVersion + 1}",
+            title = original.title,
+            subtitle = original.subtitle,
+            effectTypes = original.effectTypes,
+            pageTexts = original.pageTexts,
+            themeKey = original.themeKey,
+            coverKey = original.coverKey,
+            tags = original.tags,
+            songKey = original.songKey,
+            status = PlanStatus.DRAFT
+        )
+    }
+
     fun markPlanOpened(id: String) {
         val plans = getAllPlans().toMutableList()
         val index = plans.indexOfFirst { it.id == id }

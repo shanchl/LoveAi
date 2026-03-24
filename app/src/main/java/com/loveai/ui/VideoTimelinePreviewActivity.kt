@@ -76,6 +76,8 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
                 append("\n\u97f3\u4e50\uff1a")
                 append(preview.songName)
             }
+            append("\n\u753b\u5e03\uff1a")
+            append(preview.aspectPresetLabel)
             append("\n\u573a\u666f\uff1a")
             append(preview.scenes.size)
             append(" \u6bb5")

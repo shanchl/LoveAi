@@ -4,6 +4,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import androidx.appcompat.app.AlertDialog
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -27,6 +28,7 @@ import com.loveai.model.LovePlan
 import com.loveai.model.PlanCover
 import com.loveai.model.PlanStatus
 import com.loveai.model.PlanTheme
+import com.loveai.model.VideoAspectPreset
 import com.loveai.repository.ExportRepository
 import com.loveai.repository.PlanRepository
 import com.loveai.repository.VideoExportRepository
@@ -171,12 +173,12 @@ class PlanLibraryActivity : AppCompatActivity() {
                     putExtra(PlanEditorActivity.EXTRA_PLAN_ID, plan.id)
                 })
             },
-            onDuplicate = { plan ->
-                val copy = repository.duplicatePlan(plan.id)
+            onNewVersion = { plan ->
+                val copy = repository.createNextVersionPlan(plan.id)
                 loadPlans()
                 Toast.makeText(
                     this,
-                    if (copy != null) "\u5df2\u590d\u5236\u65b9\u6848" else "\u590d\u5236\u5931\u8d25",
+                    if (copy != null) "\u5df2\u521b\u5efa\u65b0\u7248\u672c" else "\u521b\u5efa\u65b0\u7248\u672c\u5931\u8d25",
                     Toast.LENGTH_SHORT
                 ).show()
             },
@@ -190,6 +192,9 @@ class PlanLibraryActivity : AppCompatActivity() {
             },
             onShare = { plan ->
                 sharePlanArtwork(plan)
+            },
+            onPreviewCover = { plan ->
+                previewCover(plan)
             },
             onVideoTask = { plan ->
                 createVideoTask(plan)
@@ -268,21 +273,31 @@ class PlanLibraryActivity : AppCompatActivity() {
     }
 
     private fun createVideoTask(plan: LovePlan) {
-        val queued = videoExportRepository.enqueue(plan.id, plan.name)
+        val presets = VideoAspectPreset.values()
+        AlertDialog.Builder(this, R.style.Theme_App_Dialog)
+            .setTitle("\u9009\u62e9\u89c6\u9891\u6bd4\u4f8b")
+            .setItems(presets.map { it.label }.toTypedArray()) { _, which ->
+                createVideoTaskWithPreset(plan, presets[which])
+            }
+            .show()
+    }
+
+    private fun createVideoTaskWithPreset(plan: LovePlan, aspectPreset: VideoAspectPreset) {
+        val queued = videoExportRepository.enqueue(plan.id, plan.name, aspectPreset)
         val running = queued.copy(
             status = com.loveai.model.VideoExportStatus.RUNNING,
-            note = "\u6b63\u5728\u751f\u6210\u89c6\u9891\u811a\u672c\u5305"
+            note = "\u6b63\u5728\u751f\u6210 ${aspectPreset.label} \u89c6\u9891\u811a\u672c\u5305"
         )
         videoExportRepository.update(running)
 
         runCatching {
-            val exported = VideoStoryboardExporter.export(this, plan)
+            val exported = VideoStoryboardExporter.export(this, plan, aspectPreset)
             videoExportRepository.update(
                 running.copy(
                     status = com.loveai.model.VideoExportStatus.COMPLETED,
                     outputPath = exported.file.absolutePath,
                     finishedAt = System.currentTimeMillis(),
-                    note = "\u5df2\u751f\u6210 ${exported.sceneCount} \u9875\u89c6\u9891\u811a\u672c\u5305"
+                    note = "\u5df2\u751f\u6210 ${aspectPreset.label} \u00b7 ${exported.sceneCount} \u9875\u89c6\u9891\u811a\u672c\u5305"
                 )
             )
             Toast.makeText(this, "\u89c6\u9891\u4efb\u52a1\u5df2\u521b\u5efa", Toast.LENGTH_SHORT).show()
@@ -299,14 +314,30 @@ class PlanLibraryActivity : AppCompatActivity() {
         }
     }
 
+    private fun previewCover(plan: LovePlan) {
+        runCatching {
+            val songName = MusicManager.getPlaylist().firstOrNull { it.key == plan.songKey }?.name
+            val exported = PlanArtworkExporter.exportPoster(this, plan, songName)
+            startActivity(
+                Intent(this, CoverPreviewActivity::class.java).apply {
+                    putExtra(CoverPreviewActivity.EXTRA_IMAGE_PATH, exported.file.absolutePath)
+                    putExtra(CoverPreviewActivity.EXTRA_TITLE, "${plan.name} \u5c01\u9762\u9884\u89c8")
+                }
+            )
+        }.onFailure {
+            Toast.makeText(this, "\u5c01\u9762\u9884\u89c8\u5931\u8d25", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private class PlanAdapter(
         private val resolveSongName: (String?) -> String?,
         private val onOpen: (LovePlan) -> Unit,
         private val onEdit: (LovePlan) -> Unit,
-        private val onDuplicate: (LovePlan) -> Unit,
+        private val onNewVersion: (LovePlan) -> Unit,
         private val onDelete: (LovePlan) -> Unit,
         private val onExport: (LovePlan) -> Unit,
         private val onShare: (LovePlan) -> Unit,
+        private val onPreviewCover: (LovePlan) -> Unit,
         private val onVideoTask: (LovePlan) -> Unit
     ) : RecyclerView.Adapter<PlanAdapter.ViewHolder>() {
 
@@ -372,9 +403,10 @@ class PlanLibraryActivity : AppCompatActivity() {
                 cornerRadius = 24f
             }
 
+            holder.layoutPlanCover.setOnClickListener { onPreviewCover(plan) }
             holder.btnOpen.setOnClickListener { onOpen(plan) }
             holder.btnEdit.setOnClickListener { onEdit(plan) }
-            holder.btnDuplicate.setOnClickListener { onDuplicate(plan) }
+            holder.btnNewVersion.setOnClickListener { onNewVersion(plan) }
             holder.btnDelete.setOnClickListener { onDelete(plan) }
             holder.btnExport.setOnClickListener { onExport(plan) }
             holder.btnShare.setOnClickListener { onShare(plan) }
@@ -395,7 +427,7 @@ class PlanLibraryActivity : AppCompatActivity() {
             val tvVersion: TextView = view.findViewById(R.id.tvPlanVersion)
             val btnOpen: Button = view.findViewById(R.id.btnOpenPlan)
             val btnEdit: Button = view.findViewById(R.id.btnEditPlan)
-            val btnDuplicate: Button = view.findViewById(R.id.btnDuplicatePlan)
+            val btnNewVersion: Button = view.findViewById(R.id.btnNewVersionPlan)
             val btnDelete: Button = view.findViewById(R.id.btnDeletePlan)
             val btnExport: Button = view.findViewById(R.id.btnExportPlan)
             val btnShare: Button = view.findViewById(R.id.btnSharePlan)
