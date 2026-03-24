@@ -40,6 +40,7 @@ class PlanLibraryActivity : AppCompatActivity() {
     private lateinit var tvStats: TextView
     private lateinit var btnCreate: Button
     private lateinit var btnOpenExportCenter: Button
+    private lateinit var btnOpenSmartGenerate: Button
     private lateinit var etSearchPlan: EditText
     private lateinit var spThemeFilter: Spinner
     private lateinit var spStatusFilter: Spinner
@@ -80,6 +81,7 @@ class PlanLibraryActivity : AppCompatActivity() {
         tvStats = findViewById(R.id.tvPlanStats)
         btnCreate = findViewById(R.id.btnCreatePlan)
         btnOpenExportCenter = findViewById(R.id.btnOpenExportCenter)
+        btnOpenSmartGenerate = findViewById(R.id.btnOpenSmartGenerate)
         etSearchPlan = findViewById(R.id.etSearchPlan)
         spThemeFilter = findViewById(R.id.spThemeFilter)
         spStatusFilter = findViewById(R.id.spStatusFilter)
@@ -90,6 +92,9 @@ class PlanLibraryActivity : AppCompatActivity() {
         }
         btnOpenExportCenter.setOnClickListener {
             startActivity(Intent(this, ExportCenterActivity::class.java))
+        }
+        btnOpenSmartGenerate.setOnClickListener {
+            startActivity(Intent(this, SmartGenerateActivity::class.java))
         }
 
         etSearchPlan.addTextChangedListener(object : TextWatcher {

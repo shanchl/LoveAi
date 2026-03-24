@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#120B16"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnBackSmart"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="&#36820;&#22238;" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:text="&#26234;&#33021;&#29983;&#25104;"
+                android:textColor="#FFFFFF"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="&#36755;&#20837;&#20027;&#39064;&#12289;&#35821;&#27668;&#21644;&#20851;&#38190;&#35789;&#65292;&#31995;&#32479;&#20250;&#33258;&#21160;&#29983;&#25104;&#19968;&#22871;&#21487;&#32487;&#32493;&#32534;&#36753;&#30340;&#26041;&#26696;&#33609;&#31295;"
+            android:textColor="#CCFFFFFF"
+            android:textSize="13sp" />
+
+        <Spinner
+            android:id="@+id/spSmartTheme"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp" />
+
+        <Spinner
+            android:id="@+id/spSmartTone"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp" />
+
+        <Spinner
+            android:id="@+id/spSmartCount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp" />
+
+        <EditText
+            android:id="@+id/etSmartRelation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@android:drawable/edit_text"
+            android:hint="&#31216;&#21628;&#23545;&#35937;&#65292;&#27604;&#22914;&#65306;&#20320; / &#22853;&#22953; / &#23567;&#29483;"
+            android:padding="12dp"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#88FFFFFF" />
+
+        <EditText
+            android:id="@+id/etSmartKeywords"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@android:drawable/edit_text"
+            android:gravity="top"
+            android:hint="&#20851;&#38190;&#35789;&#65292;&#29992;&#31354;&#26684;&#25110;&#39039;&#21495;&#20998;&#38548;&#65292;&#27604;&#22914;&#65306;&#26143;&#31354;&#12289;&#22799;&#22825;&#12289;&#36335;&#28783;&#12289;&#20250;&#38754;"
+            android:minLines="4"
+            android:padding="12dp"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#88FFFFFF" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnPreviewGenerate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="&#39044;&#35272;" />
+
+            <Button
+                android:id="@+id/btnGeneratePlan"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:text="&#29983;&#25104;&#24182;&#32534;&#36753;" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvSmartPreview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:background="#20FFFFFF"
+            android:minHeight="140dp"
+            android:padding="14dp"
+            android:text="&#36825;&#37324;&#20250;&#26174;&#31034;&#29983;&#25104;&#39044;&#35272;"
+            android:textColor="#FFFFFF"
+            android:textSize="14sp" />
+    </LinearLayout>
+</ScrollView>

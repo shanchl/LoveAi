@@ -46,6 +46,12 @@
             android:theme="@style/Theme.LoveAI" />
 
         <activity
+            android:name=".ui.SmartGenerateActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.LoveAI" />
+
+        <activity
             android:name=".ui.FavoriteActivity"
             android:exported="false"
             android:screenOrientation="portrait"

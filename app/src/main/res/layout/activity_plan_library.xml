@@ -40,6 +40,13 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:text="&#23548;&#20986;&#20013;&#24515;" />
+
+        <Button
+            android:id="@+id/btnOpenSmartGenerate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:text="AI &#29983;&#25104;" />
     </LinearLayout>
 
     <EditText

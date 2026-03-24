@@ -37,6 +37,15 @@ class PlanEditorActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_PLAN_ID = "plan_id"
+        const val EXTRA_GENERATED_NAME = "generated_name"
+        const val EXTRA_GENERATED_TITLE = "generated_title"
+        const val EXTRA_GENERATED_SUBTITLE = "generated_subtitle"
+        const val EXTRA_GENERATED_THEME_KEY = "generated_theme_key"
+        const val EXTRA_GENERATED_COVER_KEY = "generated_cover_key"
+        const val EXTRA_GENERATED_TAGS = "generated_tags"
+        const val EXTRA_GENERATED_EFFECTS = "generated_effects"
+        const val EXTRA_GENERATED_PAGE_TITLES = "generated_page_titles"
+        const val EXTRA_GENERATED_PAGE_SUBTITLES = "generated_page_subtitles"
     }
 
     private lateinit var etPlanName: EditText
@@ -107,6 +116,7 @@ class PlanEditorActivity : AppCompatActivity() {
         initCoverSelector()
         initSongSelector()
         loadPlanIfNeeded()
+        loadGeneratedDraftIfNeeded()
     }
 
     private fun initViews() {
@@ -309,6 +319,41 @@ class PlanEditorActivity : AppCompatActivity() {
         initSongSelector(plan.songKey)
         loadVersionHistory()
         updateEditorSummary(plan)
+    }
+
+    private fun loadGeneratedDraftIfNeeded() {
+        if (!editingPlanId.isNullOrBlank()) return
+        val generatedTitle = intent.getStringExtra(EXTRA_GENERATED_TITLE) ?: return
+
+        etPlanName.setText(intent.getStringExtra(EXTRA_GENERATED_NAME).orEmpty())
+        etTitle.setText(generatedTitle)
+        etSubtitle.setText(intent.getStringExtra(EXTRA_GENERATED_SUBTITLE).orEmpty())
+        etTags.setText(intent.getStringArrayListExtra(EXTRA_GENERATED_TAGS)?.joinToString("\uff0c").orEmpty())
+
+        val generatedEffects = intent.getStringArrayListExtra(EXTRA_GENERATED_EFFECTS).orEmpty()
+            .mapNotNull { runCatching { EffectType.valueOf(it) }.getOrNull() }
+            .take(maxEffectCount)
+        val pageTitles = intent.getStringArrayListExtra(EXTRA_GENERATED_PAGE_TITLES).orEmpty()
+        val pageSubtitles = intent.getStringArrayListExtra(EXTRA_GENERATED_PAGE_SUBTITLES).orEmpty()
+
+        selectedTypes.clear()
+        selectedTypes.addAll(generatedEffects)
+        pageTexts.clear()
+        repeat(generatedEffects.size) { index ->
+            pageTexts += PlanPageText(
+                title = pageTitles.getOrNull(index).orEmpty(),
+                subtitle = pageSubtitles.getOrNull(index).orEmpty()
+            )
+        }
+
+        val themeKey = intent.getStringExtra(EXTRA_GENERATED_THEME_KEY)
+        val coverKey = intent.getStringExtra(EXTRA_GENERATED_COVER_KEY)
+        spTheme.setSelection(themes.indexOfFirst { it?.key == themeKey }.takeIf { it >= 0 } ?: 0)
+        spCover.setSelection(covers.indexOfFirst { it?.key == coverKey }.takeIf { it >= 0 } ?: 0)
+        refreshLists()
+        updateThemeHint()
+        updateCoverHint()
+        updateEditorSummary()
     }
 
     private fun applyCurrentTheme() {
