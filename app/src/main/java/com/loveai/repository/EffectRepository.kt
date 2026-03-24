@@ -116,14 +116,20 @@ class EffectRepository {
     fun getEffectsByVariantIds(
         variantIds: List<Int>,
         titleOverride: String? = null,
-        subtitleOverride: String? = null
+        subtitleOverride: String? = null,
+        pageTexts: List<PlanPageText> = emptyList()
     ): List<Effect> {
         val timestamp = System.currentTimeMillis()
-        return variantIds.mapNotNull { variantId ->
-            val baseVariant = EffectVariants.getVariantById(variantId) ?: return@mapNotNull null
+        return variantIds.mapIndexedNotNull { index, variantId ->
+            val baseVariant = EffectVariants.getVariantById(variantId) ?: return@mapIndexedNotNull null
+            val pageText = pageTexts.getOrNull(index)
             val variant = baseVariant.copy(
-                message = titleOverride?.takeIf { it.isNotBlank() } ?: baseVariant.message,
-                subMessage = subtitleOverride ?: baseVariant.subMessage
+                message = pageText?.title?.takeIf { it.isNotBlank() }
+                    ?: titleOverride?.takeIf { it.isNotBlank() }
+                    ?: baseVariant.message,
+                subMessage = pageText?.subtitle?.takeIf { it.isNotBlank() }
+                    ?: subtitleOverride
+                    ?: baseVariant.subMessage
             )
             Effect(
                 id = "effect_${variant.id}_${timestamp}_${Random.nextInt(10000)}",
