@@ -77,12 +77,21 @@ class PlanEditorActivity : AppCompatActivity() {
     private var songs: List<MusicManager.Song> = emptyList()
     private var editingPlanId: String? = null
     private var currentStatus: PlanStatus = PlanStatus.DRAFT
+    private var pendingAssetPageIndex: Int = -1
 
     private val importSongLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri == null) return@registerForActivityResult
         handleImportedSong(uri)
+    }
+
+    private val importPageAssetLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null || pendingAssetPageIndex !in pageTexts.indices) return@registerForActivityResult
+        handleImportedPageAsset(pendingAssetPageIndex, uri)
+        pendingAssetPageIndex = -1
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -231,7 +240,17 @@ class PlanEditorActivity : AppCompatActivity() {
             getDefaultSubtitle = { etSubtitle.text.toString().trim() },
             onPageTextChanged = { index, title, subtitle ->
                 if (index in pageTexts.indices) {
-                    pageTexts[index] = PlanPageText(title = title, subtitle = subtitle)
+                    pageTexts[index] = pageTexts[index].copy(title = title, subtitle = subtitle)
+                }
+            },
+            onPickAsset = { index ->
+                pendingAssetPageIndex = index
+                importPageAssetLauncher.launch(arrayOf("image/*"))
+            },
+            onClearAsset = { index ->
+                if (index in pageTexts.indices) {
+                    pageTexts[index] = pageTexts[index].copy(assetUri = null, assetName = null)
+                    pageTextAdapter.submitList(selectedTypes.toList(), pageTexts.toList())
                 }
             }
         )
@@ -489,6 +508,18 @@ class PlanEditorActivity : AppCompatActivity() {
         Toast.makeText(this, "\u5df2\u5bfc\u5165\u97f3\u4e50\uff1a$songName", Toast.LENGTH_SHORT).show()
     }
 
+    private fun handleImportedPageAsset(index: Int, uri: Uri) {
+        val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+        contentResolver.takePersistableUriPermission(uri, takeFlags)
+        val assetName = resolveDisplayName(uri) ?: "\u56fe\u7247\u7d20\u6750"
+        pageTexts[index] = pageTexts[index].copy(
+            assetUri = uri.toString(),
+            assetName = assetName
+        )
+        pageTextAdapter.submitList(selectedTypes.toList(), pageTexts.toList())
+        Toast.makeText(this, "\u5df2\u7ed1\u5b9a\u56fe\u7247\uff1a$assetName", Toast.LENGTH_SHORT).show()
+    }
+
     private fun resolveDisplayName(uri: Uri): String? {
         return contentResolver.query(uri, null, null, null, null)?.use { cursor ->
             val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
@@ -580,7 +611,9 @@ class PlanEditorActivity : AppCompatActivity() {
     private class PageTextAdapter(
         private val getDefaultTitle: () -> String,
         private val getDefaultSubtitle: () -> String,
-        private val onPageTextChanged: (Int, String, String) -> Unit
+        private val onPageTextChanged: (Int, String, String) -> Unit,
+        private val onPickAsset: (Int) -> Unit,
+        private val onClearAsset: (Int) -> Unit
     ) : RecyclerView.Adapter<PageTextAdapter.ViewHolder>() {
 
         private var types: List<EffectType> = emptyList()
@@ -608,6 +641,9 @@ class PlanEditorActivity : AppCompatActivity() {
             private val tvPageLabel: TextView = view.findViewById(R.id.tvPageLabel)
             private val etPageTitle: EditText = view.findViewById(R.id.etPageTitle)
             private val etPageSubtitle: EditText = view.findViewById(R.id.etPageSubtitle)
+            private val tvPageAsset: TextView = view.findViewById(R.id.tvPageAsset)
+            private val btnPickPageAsset: Button = view.findViewById(R.id.btnPickPageAsset)
+            private val btnClearPageAsset: Button = view.findViewById(R.id.btnClearPageAsset)
 
             fun bind(position: Int, type: EffectType, pageText: PlanPageText) {
                 tvPageLabel.text = "\u7b2c ${position + 1} \u9875\u00b7${effectLabel(type)}"
@@ -626,6 +662,11 @@ class PlanEditorActivity : AppCompatActivity() {
                 } else {
                     "\u9ed8\u8ba4\uff1a${getDefaultSubtitle()}"
                 }
+                tvPageAsset.text = pageText.assetName?.let { "\u5df2\u7ed1\u5b9a\u56fe\u7247\uff1a$it" }
+                    ?: "\u672a\u7ed1\u5b9a\u56fe\u7247\u7d20\u6750"
+                btnClearPageAsset.isEnabled = !pageText.assetUri.isNullOrBlank()
+                btnPickPageAsset.setOnClickListener { onPickAsset(position) }
+                btnClearPageAsset.setOnClickListener { onClearAsset(position) }
 
                 val saveBack = {
                     onPageTextChanged(

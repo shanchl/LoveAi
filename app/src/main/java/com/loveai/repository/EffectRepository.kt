@@ -128,7 +128,9 @@ class EffectRepository {
             Effect(
                 id = "effect_${variant.id}_${timestamp}_${Random.nextInt(10000)}",
                 variant = variant,
-                isFavorite = false
+                isFavorite = false,
+                pageAssetUri = pageText?.assetUri,
+                pageAssetName = pageText?.assetName
             )
         }
     }

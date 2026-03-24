@@ -40,7 +40,9 @@ data class EffectVariant(
 data class Effect(
     val id: String,
     val variant: EffectVariant,
-    val isFavorite: Boolean = false
+    val isFavorite: Boolean = false,
+    val pageAssetUri: String? = null,
+    val pageAssetName: String? = null
 ) {
     val type: EffectType get() = variant.baseType
     val message: String get() = variant.message

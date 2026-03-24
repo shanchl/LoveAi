@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#120B16"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnBackExportCenter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="&#36820;&#22238;" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:text="&#23548;&#20986;&#20013;&#24515;"
+            android:textColor="#FFFFFF"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <Button
+            android:id="@+id/btnClearExports"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="&#28165;&#31354;&#35760;&#24405;" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="&#35760;&#24405;&#20320;&#26368;&#36817;&#30340;&#28023;&#25253;&#23548;&#20986;&#21644;&#23553;&#38754;&#20998;&#20139;&#32467;&#26524;"
+        android:textColor="#CCFFFFFF"
+        android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/tvEmptyExports"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="&#36824;&#27809;&#26377;&#23548;&#20986;&#35760;&#24405;"
+        android:textColor="#A8FFFFFF" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvExports"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:layout_weight="1" />
+
+</LinearLayout>

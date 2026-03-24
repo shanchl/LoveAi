@@ -1,6 +1,8 @@
 package com.loveai.ui.effects
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Color
@@ -47,8 +49,17 @@ abstract class BaseEffectView @JvmOverloads constructor(
     private val ambientOrbs = mutableListOf<AmbientOrb>()
     private val ambientPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val vignettePaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val artworkPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val artworkFramePaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val artworkLabelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.WHITE
+        textSize = 26f
+        isFakeBoldText = true
+    }
     private var vignetteShader: RadialGradient? = null
     private var currentMainTextLayout: TextLayoutResult? = null
+    private var pageArtwork: Bitmap? = null
+    private var pageArtworkUri: String? = null
 
     protected val primaryColor: Int
         get() = variant?.primaryColor ?: Color.parseColor("#FF69B4")
@@ -85,6 +96,7 @@ abstract class BaseEffectView @JvmOverloads constructor(
     fun bindEffect(effect: Effect) {
         this.effect = effect
         this.variant = effect.variant
+        loadPageArtworkIfNeeded(effect.pageAssetUri)
         onEffectBound(effect)
     }
 
@@ -98,6 +110,7 @@ abstract class BaseEffectView @JvmOverloads constructor(
         super.onDraw(canvas)
         currentMainTextLayout = null
         onDrawEffect(canvas)
+        drawPageArtwork(canvas)
         drawAmbientOverlay(canvas)
     }
 
@@ -160,6 +173,96 @@ abstract class BaseEffectView @JvmOverloads constructor(
     }
 
     protected fun currentRenderFrame(): Int = renderFrame
+
+    private fun loadPageArtworkIfNeeded(uriString: String?) {
+        if (uriString == pageArtworkUri) return
+        pageArtwork = null
+        pageArtworkUri = uriString
+        if (uriString.isNullOrBlank()) return
+        pageArtwork = runCatching {
+            context.contentResolver.openInputStream(android.net.Uri.parse(uriString))?.use { stream ->
+                BitmapFactory.decodeStream(stream)
+            }
+        }.getOrNull()
+    }
+
+    private fun drawPageArtwork(canvas: Canvas) {
+        val bitmap = pageArtwork ?: return
+        if (width == 0 || height == 0) return
+
+        val cardWidth = width * 0.46f
+        val cardHeight = height * 0.24f
+        val startTop = if (currentMainTextLayout != null) {
+            (currentMainTextLayout!!.bounds.bottom + dp(28f)).coerceAtMost(height * 0.42f)
+        } else {
+            height * 0.22f
+        }
+        val rect = RectF(
+            (width - cardWidth) / 2f,
+            startTop,
+            (width + cardWidth) / 2f,
+            startTop + cardHeight
+        )
+
+        artworkFramePaint.shader = LinearGradient(
+            rect.left,
+            rect.top,
+            rect.right,
+            rect.bottom,
+            intArrayOf(
+                adjustAlpha(Color.WHITE, 118),
+                adjustAlpha(secondaryColor, 96)
+            ),
+            null,
+            Shader.TileMode.CLAMP
+        )
+        canvas.drawRoundRect(
+            RectF(rect.left - dp(6f), rect.top - dp(6f), rect.right + dp(6f), rect.bottom + dp(6f)),
+            dp(28f),
+            dp(28f),
+            artworkFramePaint
+        )
+
+        val srcRatio = bitmap.width.toFloat() / bitmap.height.toFloat()
+        val dstRatio = rect.width() / rect.height()
+        val drawRect = if (srcRatio > dstRatio) {
+            val scaledWidth = rect.height() * srcRatio
+            RectF(
+                rect.centerX() - scaledWidth / 2f,
+                rect.top,
+                rect.centerX() + scaledWidth / 2f,
+                rect.bottom
+            )
+        } else {
+            val scaledHeight = rect.width() / srcRatio
+            RectF(
+                rect.left,
+                rect.centerY() - scaledHeight / 2f,
+                rect.right,
+                rect.centerY() + scaledHeight / 2f
+            )
+        }
+
+        artworkPaint.alpha = 228
+        canvas.save()
+        canvas.clipRect(rect)
+        canvas.drawBitmap(bitmap, null, drawRect, artworkPaint)
+        canvas.restore()
+
+        val caption = effect?.pageAssetName?.take(14)
+        if (!caption.isNullOrBlank()) {
+            ambientPaint.shader = null
+            ambientPaint.color = adjustAlpha(Color.BLACK, 110)
+            val chipRect = RectF(
+                rect.left + dp(12f),
+                rect.bottom - dp(38f),
+                rect.left + dp(168f),
+                rect.bottom - dp(8f)
+            )
+            canvas.drawRoundRect(chipRect, dp(18f), dp(18f), ambientPaint)
+            canvas.drawText(caption, chipRect.left + dp(12f), chipRect.bottom - dp(10f), artworkLabelPaint)
+        }
+    }
 
     private fun drawAmbientOverlay(canvas: Canvas) {
         if (width == 0 || height == 0) return

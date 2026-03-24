@@ -194,6 +194,8 @@ class PlanRepository(context: Context) {
                                     JSONObject().apply {
                                         put("title", pageText.title)
                                         put("subtitle", pageText.subtitle)
+                                        put("assetUri", pageText.assetUri)
+                                        put("assetName", pageText.assetName)
                                     }
                                 )
                             }
@@ -266,6 +268,8 @@ class PlanRepository(context: Context) {
                             JSONObject().apply {
                                 put("title", pageText.title)
                                 put("subtitle", pageText.subtitle)
+                                put("assetUri", pageText.assetUri)
+                                put("assetName", pageText.assetName)
                             }
                         )
                     }
@@ -309,7 +313,9 @@ class PlanRepository(context: Context) {
                 val pageObj = pageTextsArray.optJSONObject(index) ?: continue
                 pageTexts += PlanPageText(
                     title = pageObj.optString("title"),
-                    subtitle = pageObj.optString("subtitle")
+                    subtitle = pageObj.optString("subtitle"),
+                    assetUri = pageObj.optString("assetUri").ifBlank { null },
+                    assetName = pageObj.optString("assetName").ifBlank { null }
                 )
             }
         }
@@ -365,7 +371,9 @@ class PlanRepository(context: Context) {
                 val pageObj = pageTextsArray.optJSONObject(index) ?: continue
                 pageTexts += PlanPageText(
                     title = pageObj.optString("title"),
-                    subtitle = pageObj.optString("subtitle")
+                    subtitle = pageObj.optString("subtitle"),
+                    assetUri = pageObj.optString("assetUri").ifBlank { null },
+                    assetName = pageObj.optString("assetName").ifBlank { null }
                 )
             }
         }

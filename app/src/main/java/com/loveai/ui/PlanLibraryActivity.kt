@@ -22,10 +22,12 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.loveai.R
 import com.loveai.manager.MusicManager
+import com.loveai.model.ExportType
 import com.loveai.model.LovePlan
 import com.loveai.model.PlanCover
 import com.loveai.model.PlanStatus
 import com.loveai.model.PlanTheme
+import com.loveai.repository.ExportRepository
 import com.loveai.repository.PlanRepository
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -37,11 +39,13 @@ class PlanLibraryActivity : AppCompatActivity() {
     private lateinit var tvEmpty: TextView
     private lateinit var tvStats: TextView
     private lateinit var btnCreate: Button
+    private lateinit var btnOpenExportCenter: Button
     private lateinit var etSearchPlan: EditText
     private lateinit var spThemeFilter: Spinner
     private lateinit var spStatusFilter: Spinner
     private lateinit var spSortMode: Spinner
     private lateinit var repository: PlanRepository
+    private lateinit var exportRepository: ExportRepository
     private lateinit var adapter: PlanAdapter
 
     private val themeFilterOptions = listOf(null) + PlanTheme.values().toList()
@@ -57,6 +61,7 @@ class PlanLibraryActivity : AppCompatActivity() {
         setContentView(R.layout.activity_plan_library)
 
         repository = PlanRepository(this)
+        exportRepository = ExportRepository(this)
         MusicManager.ensurePlaylist(this)
 
         initViews()
@@ -74,6 +79,7 @@ class PlanLibraryActivity : AppCompatActivity() {
         tvEmpty = findViewById(R.id.tvEmptyPlans)
         tvStats = findViewById(R.id.tvPlanStats)
         btnCreate = findViewById(R.id.btnCreatePlan)
+        btnOpenExportCenter = findViewById(R.id.btnOpenExportCenter)
         etSearchPlan = findViewById(R.id.etSearchPlan)
         spThemeFilter = findViewById(R.id.spThemeFilter)
         spStatusFilter = findViewById(R.id.spStatusFilter)
@@ -81,6 +87,9 @@ class PlanLibraryActivity : AppCompatActivity() {
 
         btnCreate.setOnClickListener {
             startActivity(Intent(this, PlanEditorActivity::class.java))
+        }
+        btnOpenExportCenter.setOnClickListener {
+            startActivity(Intent(this, ExportCenterActivity::class.java))
         }
 
         etSearchPlan.addTextChangedListener(object : TextWatcher {
@@ -198,6 +207,12 @@ class PlanLibraryActivity : AppCompatActivity() {
         runCatching {
             val songName = MusicManager.getPlaylist().firstOrNull { it.key == plan.songKey }?.name
             val exported = PlanArtworkExporter.exportPoster(this, plan, songName)
+            exportRepository.addRecord(
+                planId = plan.id,
+                planName = plan.name,
+                exportType = ExportType.POSTER,
+                outputPath = exported.file.absolutePath
+            )
             Toast.makeText(
                 this,
                 "\u5df2\u5bfc\u51fa\u5230\uff1a${exported.file.absolutePath}",
@@ -212,6 +227,12 @@ class PlanLibraryActivity : AppCompatActivity() {
         runCatching {
             val songName = MusicManager.getPlaylist().firstOrNull { it.key == plan.songKey }?.name
             val exported = PlanArtworkExporter.exportPoster(this, plan, songName)
+            exportRepository.addRecord(
+                planId = plan.id,
+                planName = plan.name,
+                exportType = ExportType.SHARE_COVER,
+                outputPath = exported.file.absolutePath
+            )
             val uri = PlanArtworkExporter.buildShareUri(this, exported.file)
             startActivity(
                 Intent.createChooser(
@@ -269,8 +290,9 @@ class PlanLibraryActivity : AppCompatActivity() {
             holder.tvPlanStatus.text = plan.status.label
             holder.tvPlanCoverTitle.text = plan.title
             holder.tvName.text = plan.name
+            val assetCount = plan.pageTexts.count { !it.assetUri.isNullOrBlank() }
             holder.tvSummary.text =
-                "${plan.effectTypes.size} \u4e2a\u7279\u6548 \u00b7 ${themeLabel} \u00b7 ${songLabel}"
+                "${plan.effectTypes.size} \u4e2a\u7279\u6548 \u00b7 \u56fe\u7247 $assetCount \u5f20 \u00b7 ${songLabel}"
             holder.tvTags.text = tagsLabel
             holder.tvMeta.text = buildString {
                 append("\u521b\u5efa\u4e8e ")

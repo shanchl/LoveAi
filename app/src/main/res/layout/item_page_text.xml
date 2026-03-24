@@ -37,4 +37,33 @@
         android:textColor="#FFFFFF"
         android:textColorHint="#88FFFFFF" />
 
+    <TextView
+        android:id="@+id/tvPageAsset"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="&#26410;&#32465;&#23450;&#22270;&#29255;&#32032;&#26448;"
+        android:textColor="#A8FFFFFF"
+        android:textSize="12sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnPickPageAsset"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="&#23548;&#20837;&#22270;&#29255;" />
+
+        <Button
+            android:id="@+id/btnClearPageAsset"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:text="&#31227;&#38500;&#22270;&#29255;" />
+    </LinearLayout>
+
 </LinearLayout>
