@@ -21,6 +21,7 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
     private lateinit var tvPlanName: TextView
     private lateinit var tvSummary: TextView
     private lateinit var tvTags: TextView
+    private lateinit var tvTotals: TextView
     private lateinit var tvEmpty: TextView
     private lateinit var rvScenes: RecyclerView
     private lateinit var adapter: SceneAdapter
@@ -33,9 +34,12 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
         tvPlanName = findViewById(R.id.tvTimelinePlanName)
         tvSummary = findViewById(R.id.tvTimelineSummary)
         tvTags = findViewById(R.id.tvTimelineTags)
+        tvTotals = findViewById(R.id.tvTimelineTotals)
         tvEmpty = findViewById(R.id.tvTimelineEmpty)
         rvScenes = findViewById(R.id.rvTimelineScenes)
         adapter = SceneAdapter(
+            onMoveUp = { scene -> moveScene(scene.order, -1) },
+            onMoveDown = { scene -> moveScene(scene.order, 1) },
             onShorter = { scene -> updateSceneDuration(scene.order, scene.durationMs - 5000L) },
             onLonger = { scene -> updateSceneDuration(scene.order, scene.durationMs + 5000L) }
         )
@@ -55,6 +59,7 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
             tvPlanName.text = "\u65e0\u6cd5\u6253\u5f00\u9884\u89c8"
             tvSummary.text = "\u811a\u672c\u5305\u4e0d\u5b58\u5728\u6216\u5185\u5bb9\u65e0\u6548"
             tvTags.visibility = View.GONE
+            tvTotals.visibility = View.GONE
             tvEmpty.visibility = View.VISIBLE
             rvScenes.visibility = View.GONE
             return
@@ -77,6 +82,9 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
         }
         tvTags.visibility = if (preview.tags.isEmpty()) View.GONE else View.VISIBLE
         tvTags.text = preview.tags.joinToString("  #", prefix = "#")
+        val totalDurationSeconds = preview.scenes.sumOf { it.durationMs } / 1000
+        tvTotals.visibility = View.VISIBLE
+        tvTotals.text = "\u603b\u65f6\u957f\uff1a${totalDurationSeconds}s \u00b7 \u53ef\u4ee5\u76f4\u63a5\u8c03\u6574\u573a\u666f\u987a\u5e8f\u548c\u65f6\u957f"
         adapter.submitList(preview.scenes)
         val hasScenes = preview.scenes.isNotEmpty()
         rvScenes.visibility = if (hasScenes) View.VISIBLE else View.GONE
@@ -91,7 +99,17 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
         }
     }
 
+    private fun moveScene(order: Int, direction: Int) {
+        val path = filePath ?: return
+        val file = File(path)
+        if (VideoStoryboardExporter.moveScene(file, order, direction)) {
+            loadPreview()
+        }
+    }
+
     private class SceneAdapter(
+        private val onMoveUp: (VideoStoryboardExporter.StoryboardScene) -> Unit,
+        private val onMoveDown: (VideoStoryboardExporter.StoryboardScene) -> Unit,
         private val onShorter: (VideoStoryboardExporter.StoryboardScene) -> Unit,
         private val onLonger: (VideoStoryboardExporter.StoryboardScene) -> Unit
     ) : RecyclerView.Adapter<SceneAdapter.ViewHolder>() {
@@ -126,6 +144,10 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
                     append(item.subtitle)
                 }
             }
+            holder.btnUp.isEnabled = position > 0
+            holder.btnDown.isEnabled = position < items.lastIndex
+            holder.btnUp.setOnClickListener { onMoveUp(item) }
+            holder.btnDown.setOnClickListener { onMoveDown(item) }
             holder.btnShorter.isEnabled = item.durationMs > 5000L
             holder.btnShorter.setOnClickListener { onShorter(item) }
             holder.btnLonger.setOnClickListener { onLonger(item) }
@@ -137,6 +159,8 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
             val tvOrder: TextView = view.findViewById(R.id.tvTimelineOrder)
             val tvTitle: TextView = view.findViewById(R.id.tvTimelineSceneTitle)
             val tvMeta: TextView = view.findViewById(R.id.tvTimelineSceneMeta)
+            val btnUp: Button = view.findViewById(R.id.btnTimelineUp)
+            val btnDown: Button = view.findViewById(R.id.btnTimelineDown)
             val btnShorter: Button = view.findViewById(R.id.btnTimelineShorter)
             val btnLonger: Button = view.findViewById(R.id.btnTimelineLonger)
         }

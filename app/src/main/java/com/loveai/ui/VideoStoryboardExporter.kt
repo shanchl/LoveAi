@@ -132,4 +132,33 @@ object VideoStoryboardExporter {
         }
         return false
     }
+
+    fun moveScene(file: File, order: Int, direction: Int): Boolean {
+        if (!file.exists()) return false
+        val json = runCatching { JSONObject(file.readText(Charsets.UTF_8)) }.getOrNull() ?: return false
+        val scenesArray = json.optJSONArray("scenes") ?: return false
+        val scenes = mutableListOf<JSONObject>()
+        for (index in 0 until scenesArray.length()) {
+            scenesArray.optJSONObject(index)?.let { scenes += it }
+        }
+        if (scenes.isEmpty()) return false
+
+        val sourceIndex = scenes.indexOfFirst {
+            (it.optInt("order").takeIf { value -> value > 0 } ?: (scenes.indexOf(it) + 1)) == order
+        }
+        if (sourceIndex < 0) return false
+        val targetIndex = (sourceIndex + direction).coerceIn(0, scenes.lastIndex)
+        if (targetIndex == sourceIndex) return false
+
+        val moving = scenes.removeAt(sourceIndex)
+        scenes.add(targetIndex, moving)
+        val updatedArray = JSONArray()
+        scenes.forEachIndexed { index, item ->
+            item.put("order", index + 1)
+            updatedArray.put(item)
+        }
+        json.put("scenes", updatedArray)
+        file.writeText(json.toString(2), Charsets.UTF_8)
+        return true
+    }
 }

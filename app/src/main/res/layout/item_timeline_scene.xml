@@ -48,9 +48,23 @@
             android:orientation="horizontal">
 
             <Button
+                android:id="@+id/btnTimelineUp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="&#19978;&#31227;" />
+
+            <Button
+                android:id="@+id/btnTimelineDown"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="&#19979;&#31227;" />
+
+            <Button
                 android:id="@+id/btnTimelineShorter"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
                 android:text="-5s" />
 
             <Button
