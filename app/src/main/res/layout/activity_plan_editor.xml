@@ -20,6 +20,22 @@
             android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/tvPlanStatusSummary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="#FFD7E8"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tvVersionSummary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="#A8FFFFFF"
+            android:textSize="12sp" />
+
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
@@ -209,6 +225,31 @@
             android:layout_marginTop="12dp"
             android:nestedScrollingEnabled="false" />
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="&#29256;&#26412;&#21382;&#21490;"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvVersionEmpty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="&#36824;&#27809;&#26377;&#21487;&#24674;&#22797;&#30340;&#29256;&#26412;&#12290;&#20808;&#20445;&#23384;&#19968;&#27425;&#8349;&#31295;&#25110;&#21457;&#24067;&#21518;&#65292;&#36825;&#37324;&#20250;&#33258;&#21160;&#29983;&#25104;&#24555;&#29031;&#12290;"
+            android:textColor="#A8FFFFFF"
+            android:textSize="12sp" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvVersions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:nestedScrollingEnabled="false" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -223,11 +264,18 @@
                 android:text="&#21462;&#28040;" />
 
             <Button
-                android:id="@+id/btnSavePlan"
+                android:id="@+id/btnSaveDraft"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
-                android:text="&#20445;&#23384;&#24182;&#25773;&#25918;" />
+                android:text="&#20445;&#23384;&#33489;&#31295;" />
+
+            <Button
+                android:id="@+id/btnPublishPlan"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:text="&#21457;&#24067;&#24182;&#25773;&#25918;" />
         </LinearLayout>
 
     </LinearLayout>

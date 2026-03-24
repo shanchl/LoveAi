@@ -12,6 +12,10 @@ data class LovePlan(
     val tags: List<String> = emptyList(),
     val songKey: String? = null,
     val createdAt: Long,
+    val updatedAt: Long = createdAt,
+    val publishedAt: Long = 0L,
     val lastOpenedAt: Long = 0L,
-    val playCount: Int = 0
+    val playCount: Int = 0,
+    val status: PlanStatus = PlanStatus.DRAFT,
+    val currentVersion: Int = 1
 )

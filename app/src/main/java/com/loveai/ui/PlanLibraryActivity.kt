@@ -24,6 +24,7 @@ import com.loveai.R
 import com.loveai.manager.MusicManager
 import com.loveai.model.LovePlan
 import com.loveai.model.PlanCover
+import com.loveai.model.PlanStatus
 import com.loveai.model.PlanTheme
 import com.loveai.repository.PlanRepository
 import java.text.SimpleDateFormat
@@ -38,11 +39,13 @@ class PlanLibraryActivity : AppCompatActivity() {
     private lateinit var btnCreate: Button
     private lateinit var etSearchPlan: EditText
     private lateinit var spThemeFilter: Spinner
+    private lateinit var spStatusFilter: Spinner
     private lateinit var spSortMode: Spinner
     private lateinit var repository: PlanRepository
     private lateinit var adapter: PlanAdapter
 
     private val themeFilterOptions = listOf(null) + PlanTheme.values().toList()
+    private val statusFilterOptions = listOf<PlanStatus?>(null, PlanStatus.DRAFT, PlanStatus.PUBLISHED)
     private val sortOptions = listOf(
         PlanRepository.SortMode.RECENT,
         PlanRepository.SortMode.CREATED,
@@ -73,6 +76,7 @@ class PlanLibraryActivity : AppCompatActivity() {
         btnCreate = findViewById(R.id.btnCreatePlan)
         etSearchPlan = findViewById(R.id.etSearchPlan)
         spThemeFilter = findViewById(R.id.spThemeFilter)
+        spStatusFilter = findViewById(R.id.spStatusFilter)
         spSortMode = findViewById(R.id.spSortMode)
 
         btnCreate.setOnClickListener {
@@ -109,9 +113,24 @@ class PlanLibraryActivity : AppCompatActivity() {
             setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
 
+        val statusLabels = listOf(
+            "\u5168\u90e8\u72b6\u6001",
+            PlanStatus.DRAFT.label,
+            PlanStatus.PUBLISHED.label
+        )
+        spStatusFilter.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            statusLabels
+        ).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+
         spThemeFilter.setSelection(0)
+        spStatusFilter.setSelection(0)
         spSortMode.setSelection(0)
         spThemeFilter.onItemSelectedListener = SimpleItemSelectedListener { loadPlans() }
+        spStatusFilter.onItemSelectedListener = SimpleItemSelectedListener { loadPlans() }
         spSortMode.onItemSelectedListener = SimpleItemSelectedListener { loadPlans() }
     }
 
@@ -158,17 +177,21 @@ class PlanLibraryActivity : AppCompatActivity() {
 
     private fun loadPlans() {
         val themeKey = themeFilterOptions.getOrNull(spThemeFilter.selectedItemPosition)?.key
+        val status = statusFilterOptions.getOrNull(spStatusFilter.selectedItemPosition)
         val sortMode = sortOptions.getOrElse(spSortMode.selectedItemPosition) {
             PlanRepository.SortMode.RECENT
         }
         val plans = repository.queryPlans(
             keyword = etSearchPlan.text.toString(),
             themeKey = themeKey,
+            status = status,
             sortMode = sortMode
         )
         adapter.submitList(plans)
         tvEmpty.visibility = if (plans.isEmpty()) View.VISIBLE else View.GONE
-        tvStats.text = "\u5171 ${plans.size} \u4e2a\u65b9\u6848"
+        val draftCount = plans.count { it.status == PlanStatus.DRAFT }
+        val publishedCount = plans.count { it.status == PlanStatus.PUBLISHED }
+        tvStats.text = "\u5171 ${plans.size} \u4e2a\u65b9\u6848 \u00b7 \u8349\u7a3f $draftCount \u00b7 \u5df2\u53d1\u5e03 $publishedCount"
     }
 
     private fun exportPlanArtwork(plan: LovePlan) {
@@ -243,6 +266,7 @@ class PlanLibraryActivity : AppCompatActivity() {
             }
 
             holder.tvPlanTheme.text = themeLabel
+            holder.tvPlanStatus.text = plan.status.label
             holder.tvPlanCoverTitle.text = plan.title
             holder.tvName.text = plan.name
             holder.tvSummary.text =
@@ -257,6 +281,16 @@ class PlanLibraryActivity : AppCompatActivity() {
                 if (plan.lastOpenedAt > 0L) {
                     append(" \u00b7 \u6700\u8fd1\u4f7f\u7528 ")
                     append(formatter.format(Date(plan.lastOpenedAt)))
+                }
+            }
+            holder.tvVersion.text = buildString {
+                append("V")
+                append(plan.currentVersion)
+                append(" \u00b7 \u66f4\u65b0 ")
+                append(formatter.format(Date(plan.updatedAt)))
+                if (plan.publishedAt > 0L) {
+                    append(" \u00b7 \u53d1\u5e03 ")
+                    append(formatter.format(Date(plan.publishedAt)))
                 }
             }
 
@@ -280,11 +314,13 @@ class PlanLibraryActivity : AppCompatActivity() {
         class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             val layoutPlanCover: LinearLayout = view.findViewById(R.id.layoutPlanCover)
             val tvPlanTheme: TextView = view.findViewById(R.id.tvPlanTheme)
+            val tvPlanStatus: TextView = view.findViewById(R.id.tvPlanStatus)
             val tvPlanCoverTitle: TextView = view.findViewById(R.id.tvPlanCoverTitle)
             val tvName: TextView = view.findViewById(R.id.tvPlanName)
             val tvSummary: TextView = view.findViewById(R.id.tvPlanSummary)
             val tvTags: TextView = view.findViewById(R.id.tvPlanTags)
             val tvMeta: TextView = view.findViewById(R.id.tvPlanMeta)
+            val tvVersion: TextView = view.findViewById(R.id.tvPlanVersion)
             val btnOpen: Button = view.findViewById(R.id.btnOpenPlan)
             val btnEdit: Button = view.findViewById(R.id.btnEditPlan)
             val btnDuplicate: Button = view.findViewById(R.id.btnDuplicatePlan)

@@ -9,7 +9,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="&#25105;&#30340;&#26041;&#26696;"
+        android:text="&#20316;&#21697;&#20013;&#24515;"
         android:textColor="#FFFFFF"
         android:textSize="26sp"
         android:textStyle="bold" />
@@ -18,7 +18,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:text="&#25628;&#32034;&#12289;&#31579;&#36873;&#12289;&#31649;&#29702;&#20320;&#30340;&#28010;&#28459;&#20316;&#21697;"
+        android:text="&#31649;&#29702;&#33489;&#31295;&#12289;&#24050;&#21457;&#24067;&#26041;&#26696;&#21644;&#26368;&#36817;&#20351;&#29992;&#30340;&#28010;&#28459;&#20316;&#21697;"
         android:textColor="#CCFFFFFF"
         android:textSize="14sp" />
 
@@ -59,6 +59,12 @@
             android:layout_marginStart="12dp"
             android:layout_weight="1" />
     </LinearLayout>
+
+    <Spinner
+        android:id="@+id/spStatusFilter"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp" />
 
     <TextView
         android:id="@+id/tvPlanStats"
