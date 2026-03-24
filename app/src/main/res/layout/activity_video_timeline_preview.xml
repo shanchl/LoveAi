@@ -45,6 +45,28 @@
         android:textColor="#CCFFFFFF"
         android:textSize="12sp" />
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnToggleIntro"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="&#29255;&#22836;&#24050;&#24320;&#21551;" />
+
+        <Button
+            android:id="@+id/btnToggleOutro"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:text="&#29255;&#23614;&#24050;&#24320;&#21551;" />
+    </LinearLayout>
+
     <TextView
         android:id="@+id/tvTimelineEmpty"
         android:layout_width="wrap_content"

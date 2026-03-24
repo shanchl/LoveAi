@@ -33,6 +33,10 @@ object VideoStoryboardExporter {
         val subtitle: String,
         val songName: String?,
         val aspectPresetLabel: String,
+        val hasIntro: Boolean,
+        val hasOutro: Boolean,
+        val introDurationMs: Long,
+        val outroDurationMs: Long,
         val tags: List<String>,
         val scenes: List<StoryboardScene>
     )
@@ -62,6 +66,10 @@ object VideoStoryboardExporter {
             put("aspectPresetKey", aspectPreset.key)
             put("frameWidth", aspectPreset.width)
             put("frameHeight", aspectPreset.height)
+            put("hasIntro", true)
+            put("hasOutro", true)
+            put("introDurationMs", 3000)
+            put("outroDurationMs", 3000)
             put(
                 "tags",
                 JSONArray().apply {
@@ -123,6 +131,10 @@ object VideoStoryboardExporter {
             subtitle = json.optString("subtitle"),
             songName = json.optString("songName").ifBlank { null },
             aspectPresetLabel = preset.label,
+            hasIntro = json.optBoolean("hasIntro", true),
+            hasOutro = json.optBoolean("hasOutro", true),
+            introDurationMs = json.optLong("introDurationMs").takeIf { it > 0L } ?: 3000L,
+            outroDurationMs = json.optLong("outroDurationMs").takeIf { it > 0L } ?: 3000L,
             tags = tags,
             scenes = scenes
         )
@@ -171,5 +183,23 @@ object VideoStoryboardExporter {
         json.put("scenes", updatedArray)
         file.writeText(json.toString(2), Charsets.UTF_8)
         return true
+    }
+
+    fun toggleEdgeScene(file: File, edge: String): Boolean {
+        if (!file.exists()) return false
+        val json = runCatching { JSONObject(file.readText(Charsets.UTF_8)) }.getOrNull() ?: return false
+        return when (edge) {
+            "intro" -> {
+                json.put("hasIntro", !json.optBoolean("hasIntro", true))
+                file.writeText(json.toString(2), Charsets.UTF_8)
+                true
+            }
+            "outro" -> {
+                json.put("hasOutro", !json.optBoolean("hasOutro", true))
+                file.writeText(json.toString(2), Charsets.UTF_8)
+                true
+            }
+            else -> false
+        }
     }
 }

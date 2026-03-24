@@ -55,14 +55,17 @@ class PlanRepository(context: Context) {
         tags: List<String> = emptyList(),
         songKey: String? = null,
         status: PlanStatus = PlanStatus.DRAFT,
+        rootPlanId: String? = null,
+        parentPlanId: String? = null,
         existingId: String? = null
     ): LovePlan {
         val plans = getAllPlans().toMutableList()
         val existingPlan = existingId?.let { id -> plans.firstOrNull { it.id == id } }
         val now = System.currentTimeMillis()
         val newVersion = (existingPlan?.currentVersion ?: 0) + 1
+        val planId = existingId ?: UUID.randomUUID().toString()
         val plan = LovePlan(
-            id = existingId ?: UUID.randomUUID().toString(),
+            id = planId,
             name = name.ifBlank { "\u6211\u7684\u65b9\u6848" },
             title = title.ifBlank { "\u7ed9\u4f60\u7684\u6d6a\u6f2b\u7247\u6bb5" },
             subtitle = subtitle,
@@ -81,7 +84,9 @@ class PlanRepository(context: Context) {
             lastOpenedAt = existingPlan?.lastOpenedAt ?: 0L,
             playCount = existingPlan?.playCount ?: 0,
             status = status,
-            currentVersion = newVersion
+            currentVersion = newVersion,
+            rootPlanId = rootPlanId ?: existingPlan?.rootPlanId ?: planId,
+            parentPlanId = parentPlanId ?: existingPlan?.parentPlanId
         )
 
         val existingIndex = plans.indexOfFirst { it.id == plan.id }
@@ -113,7 +118,9 @@ class PlanRepository(context: Context) {
             coverKey = original.coverKey,
             tags = original.tags,
             songKey = original.songKey,
-            status = PlanStatus.DRAFT
+            status = PlanStatus.DRAFT,
+            rootPlanId = original.rootPlanId ?: original.id,
+            parentPlanId = original.id
         )
     }
 
@@ -129,8 +136,16 @@ class PlanRepository(context: Context) {
             coverKey = original.coverKey,
             tags = original.tags,
             songKey = original.songKey,
-            status = PlanStatus.DRAFT
+            status = PlanStatus.DRAFT,
+            rootPlanId = original.rootPlanId ?: original.id,
+            parentPlanId = original.id
         )
+    }
+
+    fun getRelatedPlans(rootPlanId: String): List<LovePlan> {
+        return getAllPlans()
+            .filter { (it.rootPlanId ?: it.id) == rootPlanId }
+            .sortedByDescending { it.updatedAt }
     }
 
     fun markPlanOpened(id: String) {
@@ -227,6 +242,8 @@ class PlanRepository(context: Context) {
                     put("playCount", plan.playCount)
                     put("status", plan.status.key)
                     put("currentVersion", plan.currentVersion)
+                    put("rootPlanId", plan.rootPlanId)
+                    put("parentPlanId", plan.parentPlanId)
                     put(
                         "tags",
                         JSONArray().apply {
@@ -363,7 +380,9 @@ class PlanRepository(context: Context) {
             lastOpenedAt = obj.optLong("lastOpenedAt"),
             playCount = obj.optInt("playCount"),
             status = PlanStatus.fromKey(obj.optString("status")) ?: PlanStatus.DRAFT,
-            currentVersion = obj.optInt("currentVersion").takeIf { it > 0 } ?: 1
+            currentVersion = obj.optInt("currentVersion").takeIf { it > 0 } ?: 1,
+            rootPlanId = obj.optString("rootPlanId").ifBlank { obj.optString("id").ifBlank { null } },
+            parentPlanId = obj.optString("parentPlanId").ifBlank { null }
         )
     }
 

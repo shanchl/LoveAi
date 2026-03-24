@@ -17,5 +17,7 @@ data class LovePlan(
     val lastOpenedAt: Long = 0L,
     val playCount: Int = 0,
     val status: PlanStatus = PlanStatus.DRAFT,
-    val currentVersion: Int = 1
+    val currentVersion: Int = 1,
+    val rootPlanId: String? = null,
+    val parentPlanId: String? = null
 )

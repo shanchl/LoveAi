@@ -23,6 +23,8 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
     private lateinit var tvTags: TextView
     private lateinit var tvTotals: TextView
     private lateinit var tvEmpty: TextView
+    private lateinit var btnToggleIntro: Button
+    private lateinit var btnToggleOutro: Button
     private lateinit var rvScenes: RecyclerView
     private lateinit var adapter: SceneAdapter
     private var filePath: String? = null
@@ -36,6 +38,8 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
         tvTags = findViewById(R.id.tvTimelineTags)
         tvTotals = findViewById(R.id.tvTimelineTotals)
         tvEmpty = findViewById(R.id.tvTimelineEmpty)
+        btnToggleIntro = findViewById(R.id.btnToggleIntro)
+        btnToggleOutro = findViewById(R.id.btnToggleOutro)
         rvScenes = findViewById(R.id.rvTimelineScenes)
         adapter = SceneAdapter(
             onMoveUp = { scene -> moveScene(scene.order, -1) },
@@ -47,6 +51,8 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
         rvScenes.layoutManager = LinearLayoutManager(this)
         rvScenes.adapter = adapter
         findViewById<Button>(R.id.btnBackTimeline).setOnClickListener { finish() }
+        btnToggleIntro.setOnClickListener { toggleEdgeScene("intro") }
+        btnToggleOutro.setOnClickListener { toggleEdgeScene("outro") }
 
         loadPreview()
     }
@@ -60,6 +66,8 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
             tvSummary.text = "\u811a\u672c\u5305\u4e0d\u5b58\u5728\u6216\u5185\u5bb9\u65e0\u6548"
             tvTags.visibility = View.GONE
             tvTotals.visibility = View.GONE
+            btnToggleIntro.visibility = View.GONE
+            btnToggleOutro.visibility = View.GONE
             tvEmpty.visibility = View.VISIBLE
             rvScenes.visibility = View.GONE
             return
@@ -84,9 +92,23 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
         }
         tvTags.visibility = if (preview.tags.isEmpty()) View.GONE else View.VISIBLE
         tvTags.text = preview.tags.joinToString("  #", prefix = "#")
-        val totalDurationSeconds = preview.scenes.sumOf { it.durationMs } / 1000
+        btnToggleIntro.visibility = View.VISIBLE
+        btnToggleOutro.visibility = View.VISIBLE
+        btnToggleIntro.text = if (preview.hasIntro) "\u7247\u5934\u5df2\u5f00\u542f" else "\u5f00\u542f\u7247\u5934"
+        btnToggleOutro.text = if (preview.hasOutro) "\u7247\u5c3e\u5df2\u5f00\u542f" else "\u5f00\u542f\u7247\u5c3e"
+        val edgeDuration = (if (preview.hasIntro) preview.introDurationMs else 0L) +
+            (if (preview.hasOutro) preview.outroDurationMs else 0L)
+        val totalDurationSeconds = (preview.scenes.sumOf { it.durationMs } + edgeDuration) / 1000
         tvTotals.visibility = View.VISIBLE
-        tvTotals.text = "\u603b\u65f6\u957f\uff1a${totalDurationSeconds}s \u00b7 \u53ef\u4ee5\u76f4\u63a5\u8c03\u6574\u573a\u666f\u987a\u5e8f\u548c\u65f6\u957f"
+        tvTotals.text = buildString {
+            append("\u603b\u65f6\u957f\uff1a")
+            append(totalDurationSeconds)
+            append("s \u00b7 \u7247\u5934 ")
+            append(if (preview.hasIntro) "${preview.introDurationMs / 1000}s" else "\u5173\u95ed")
+            append(" \u00b7 \u7247\u5c3e ")
+            append(if (preview.hasOutro) "${preview.outroDurationMs / 1000}s" else "\u5173\u95ed")
+            append(" \u00b7 \u53ef\u8c03\u987a\u5e8f\u4e0e\u65f6\u957f")
+        }
         adapter.submitList(preview.scenes)
         val hasScenes = preview.scenes.isNotEmpty()
         rvScenes.visibility = if (hasScenes) View.VISIBLE else View.GONE
@@ -105,6 +127,14 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
         val path = filePath ?: return
         val file = File(path)
         if (VideoStoryboardExporter.moveScene(file, order, direction)) {
+            loadPreview()
+        }
+    }
+
+    private fun toggleEdgeScene(edge: String) {
+        val path = filePath ?: return
+        val file = File(path)
+        if (VideoStoryboardExporter.toggleEdgeScene(file, edge)) {
             loadPreview()
         }
     }

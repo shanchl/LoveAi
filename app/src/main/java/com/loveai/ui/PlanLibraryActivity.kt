@@ -163,6 +163,9 @@ class PlanLibraryActivity : AppCompatActivity() {
             resolveSongName = { songKey ->
                 MusicManager.getPlaylist().firstOrNull { it.key == songKey }?.name
             },
+            resolveRelatedCount = { rootPlanId ->
+                repository.getRelatedPlans(rootPlanId ?: "").size
+            },
             onOpen = { plan ->
                 startActivity(Intent(this, MainActivity::class.java).apply {
                     putExtra(MainActivity.EXTRA_PLAN_ID, plan.id)
@@ -331,6 +334,7 @@ class PlanLibraryActivity : AppCompatActivity() {
 
     private class PlanAdapter(
         private val resolveSongName: (String?) -> String?,
+        private val resolveRelatedCount: (String?) -> Int,
         private val onOpen: (LovePlan) -> Unit,
         private val onEdit: (LovePlan) -> Unit,
         private val onNewVersion: (LovePlan) -> Unit,
@@ -395,6 +399,12 @@ class PlanLibraryActivity : AppCompatActivity() {
                     append(formatter.format(Date(plan.publishedAt)))
                 }
             }
+            val relatedCount = resolveRelatedCount(plan.rootPlanId ?: plan.id)
+            val parentLabel = when {
+                plan.parentPlanId.isNullOrBlank() -> "\u4e3b\u7248\u672c"
+                else -> "\u6e90\u81ea ${shortId(plan.parentPlanId)}"
+            }
+            holder.tvLineage.text = "\u7248\u672c\u94fe ${shortId(plan.rootPlanId ?: plan.id)} \u00b7 $parentLabel \u00b7 \u5171 $relatedCount \u4e2a\u7248\u672c"
 
             holder.layoutPlanCover.background = GradientDrawable(
                 GradientDrawable.Orientation.TL_BR,
@@ -425,6 +435,7 @@ class PlanLibraryActivity : AppCompatActivity() {
             val tvTags: TextView = view.findViewById(R.id.tvPlanTags)
             val tvMeta: TextView = view.findViewById(R.id.tvPlanMeta)
             val tvVersion: TextView = view.findViewById(R.id.tvPlanVersion)
+            val tvLineage: TextView = view.findViewById(R.id.tvPlanLineage)
             val btnOpen: Button = view.findViewById(R.id.btnOpenPlan)
             val btnEdit: Button = view.findViewById(R.id.btnEditPlan)
             val btnNewVersion: Button = view.findViewById(R.id.btnNewVersionPlan)
@@ -435,6 +446,8 @@ class PlanLibraryActivity : AppCompatActivity() {
         }
 
         companion object {
+            private fun shortId(id: String): String = id.take(6)
+
             private fun coverColors(theme: PlanTheme?, cover: PlanCover?): IntArray {
                 if (cover != null) {
                     return intArrayOf(
