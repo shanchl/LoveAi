@@ -67,6 +67,28 @@
             android:text="&#29255;&#23614;&#24050;&#24320;&#21551;" />
     </LinearLayout>
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnIntroStyle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="&#29255;&#22836;&#39118;&#26684;" />
+
+        <Button
+            android:id="@+id/btnOutroStyle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:text="&#29255;&#23614;&#39118;&#26684;" />
+    </LinearLayout>
+
     <TextView
         android:id="@+id/tvTimelineEmpty"
         android:layout_width="wrap_content"

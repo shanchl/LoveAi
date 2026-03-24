@@ -25,6 +25,8 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
     private lateinit var tvEmpty: TextView
     private lateinit var btnToggleIntro: Button
     private lateinit var btnToggleOutro: Button
+    private lateinit var btnIntroStyle: Button
+    private lateinit var btnOutroStyle: Button
     private lateinit var rvScenes: RecyclerView
     private lateinit var adapter: SceneAdapter
     private var filePath: String? = null
@@ -40,6 +42,8 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
         tvEmpty = findViewById(R.id.tvTimelineEmpty)
         btnToggleIntro = findViewById(R.id.btnToggleIntro)
         btnToggleOutro = findViewById(R.id.btnToggleOutro)
+        btnIntroStyle = findViewById(R.id.btnIntroStyle)
+        btnOutroStyle = findViewById(R.id.btnOutroStyle)
         rvScenes = findViewById(R.id.rvTimelineScenes)
         adapter = SceneAdapter(
             onMoveUp = { scene -> moveScene(scene.order, -1) },
@@ -53,6 +57,8 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnBackTimeline).setOnClickListener { finish() }
         btnToggleIntro.setOnClickListener { toggleEdgeScene("intro") }
         btnToggleOutro.setOnClickListener { toggleEdgeScene("outro") }
+        btnIntroStyle.setOnClickListener { cycleEdgeStyle("intro") }
+        btnOutroStyle.setOnClickListener { cycleEdgeStyle("outro") }
 
         loadPreview()
     }
@@ -68,6 +74,8 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
             tvTotals.visibility = View.GONE
             btnToggleIntro.visibility = View.GONE
             btnToggleOutro.visibility = View.GONE
+            btnIntroStyle.visibility = View.GONE
+            btnOutroStyle.visibility = View.GONE
             tvEmpty.visibility = View.VISIBLE
             rvScenes.visibility = View.GONE
             return
@@ -94,8 +102,12 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
         tvTags.text = preview.tags.joinToString("  #", prefix = "#")
         btnToggleIntro.visibility = View.VISIBLE
         btnToggleOutro.visibility = View.VISIBLE
+        btnIntroStyle.visibility = View.VISIBLE
+        btnOutroStyle.visibility = View.VISIBLE
         btnToggleIntro.text = if (preview.hasIntro) "\u7247\u5934\u5df2\u5f00\u542f" else "\u5f00\u542f\u7247\u5934"
         btnToggleOutro.text = if (preview.hasOutro) "\u7247\u5c3e\u5df2\u5f00\u542f" else "\u5f00\u542f\u7247\u5c3e"
+        btnIntroStyle.text = "\u7247\u5934\u98ce\u683c\uff1a${preview.introStyleLabel}"
+        btnOutroStyle.text = "\u7247\u5c3e\u98ce\u683c\uff1a${preview.outroStyleLabel}"
         val edgeDuration = (if (preview.hasIntro) preview.introDurationMs else 0L) +
             (if (preview.hasOutro) preview.outroDurationMs else 0L)
         val totalDurationSeconds = (preview.scenes.sumOf { it.durationMs } + edgeDuration) / 1000
@@ -104,9 +116,9 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
             append("\u603b\u65f6\u957f\uff1a")
             append(totalDurationSeconds)
             append("s \u00b7 \u7247\u5934 ")
-            append(if (preview.hasIntro) "${preview.introDurationMs / 1000}s" else "\u5173\u95ed")
+            append(if (preview.hasIntro) "${preview.introDurationMs / 1000}s/${preview.introStyleLabel}" else "\u5173\u95ed")
             append(" \u00b7 \u7247\u5c3e ")
-            append(if (preview.hasOutro) "${preview.outroDurationMs / 1000}s" else "\u5173\u95ed")
+            append(if (preview.hasOutro) "${preview.outroDurationMs / 1000}s/${preview.outroStyleLabel}" else "\u5173\u95ed")
             append(" \u00b7 \u53ef\u8c03\u987a\u5e8f\u4e0e\u65f6\u957f")
         }
         adapter.submitList(preview.scenes)
@@ -135,6 +147,14 @@ class VideoTimelinePreviewActivity : AppCompatActivity() {
         val path = filePath ?: return
         val file = File(path)
         if (VideoStoryboardExporter.toggleEdgeScene(file, edge)) {
+            loadPreview()
+        }
+    }
+
+    private fun cycleEdgeStyle(edge: String) {
+        val path = filePath ?: return
+        val file = File(path)
+        if (VideoStoryboardExporter.cycleEdgeStyle(file, edge)) {
             loadPreview()
         }
     }

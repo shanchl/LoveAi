@@ -199,6 +199,11 @@ class PlanLibraryActivity : AppCompatActivity() {
             onPreviewCover = { plan ->
                 previewCover(plan)
             },
+            onOpenVersionChain = { plan ->
+                startActivity(Intent(this, VersionChainActivity::class.java).apply {
+                    putExtra(VersionChainActivity.EXTRA_ROOT_PLAN_ID, plan.rootPlanId ?: plan.id)
+                })
+            },
             onVideoTask = { plan ->
                 createVideoTask(plan)
             }
@@ -342,6 +347,7 @@ class PlanLibraryActivity : AppCompatActivity() {
         private val onExport: (LovePlan) -> Unit,
         private val onShare: (LovePlan) -> Unit,
         private val onPreviewCover: (LovePlan) -> Unit,
+        private val onOpenVersionChain: (LovePlan) -> Unit,
         private val onVideoTask: (LovePlan) -> Unit
     ) : RecyclerView.Adapter<PlanAdapter.ViewHolder>() {
 
@@ -414,6 +420,7 @@ class PlanLibraryActivity : AppCompatActivity() {
             }
 
             holder.layoutPlanCover.setOnClickListener { onPreviewCover(plan) }
+            holder.tvLineage.setOnClickListener { onOpenVersionChain(plan) }
             holder.btnOpen.setOnClickListener { onOpen(plan) }
             holder.btnEdit.setOnClickListener { onEdit(plan) }
             holder.btnNewVersion.setOnClickListener { onNewVersion(plan) }

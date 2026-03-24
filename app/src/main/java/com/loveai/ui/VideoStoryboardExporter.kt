@@ -4,6 +4,7 @@ import android.content.Context
 import com.loveai.manager.MusicManager
 import com.loveai.model.LovePlan
 import com.loveai.model.VideoAspectPreset
+import com.loveai.model.VideoEdgeStyle
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -37,6 +38,8 @@ object VideoStoryboardExporter {
         val hasOutro: Boolean,
         val introDurationMs: Long,
         val outroDurationMs: Long,
+        val introStyleLabel: String,
+        val outroStyleLabel: String,
         val tags: List<String>,
         val scenes: List<StoryboardScene>
     )
@@ -70,6 +73,8 @@ object VideoStoryboardExporter {
             put("hasOutro", true)
             put("introDurationMs", 3000)
             put("outroDurationMs", 3000)
+            put("introStyleKey", VideoEdgeStyle.CINEMATIC.key)
+            put("outroStyleKey", VideoEdgeStyle.SOFT_GLOW.key)
             put(
                 "tags",
                 JSONArray().apply {
@@ -125,6 +130,8 @@ object VideoStoryboardExporter {
         }
 
         val preset = VideoAspectPreset.fromKey(json.optString("aspectPresetKey")) ?: VideoAspectPreset.PORTRAIT
+        val introStyle = VideoEdgeStyle.fromKey(json.optString("introStyleKey")) ?: VideoEdgeStyle.CINEMATIC
+        val outroStyle = VideoEdgeStyle.fromKey(json.optString("outroStyleKey")) ?: VideoEdgeStyle.SOFT_GLOW
         return StoryboardPreview(
             planName = json.optString("planName"),
             title = json.optString("title"),
@@ -135,6 +142,8 @@ object VideoStoryboardExporter {
             hasOutro = json.optBoolean("hasOutro", true),
             introDurationMs = json.optLong("introDurationMs").takeIf { it > 0L } ?: 3000L,
             outroDurationMs = json.optLong("outroDurationMs").takeIf { it > 0L } ?: 3000L,
+            introStyleLabel = introStyle.label,
+            outroStyleLabel = outroStyle.label,
             tags = tags,
             scenes = scenes
         )
@@ -196,6 +205,24 @@ object VideoStoryboardExporter {
             }
             "outro" -> {
                 json.put("hasOutro", !json.optBoolean("hasOutro", true))
+                file.writeText(json.toString(2), Charsets.UTF_8)
+                true
+            }
+            else -> false
+        }
+    }
+
+    fun cycleEdgeStyle(file: File, edge: String): Boolean {
+        if (!file.exists()) return false
+        val json = runCatching { JSONObject(file.readText(Charsets.UTF_8)) }.getOrNull() ?: return false
+        return when (edge) {
+            "intro" -> {
+                json.put("introStyleKey", VideoEdgeStyle.next(json.optString("introStyleKey")).key)
+                file.writeText(json.toString(2), Charsets.UTF_8)
+                true
+            }
+            "outro" -> {
+                json.put("outroStyleKey", VideoEdgeStyle.next(json.optString("outroStyleKey")).key)
                 file.writeText(json.toString(2), Charsets.UTF_8)
                 true
             }
