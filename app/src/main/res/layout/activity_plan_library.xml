@@ -47,6 +47,13 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:text="AI &#29983;&#25104;" />
+
+        <Button
+            android:id="@+id/btnOpenVideoCenter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:text="&#35270;&#39057;&#20219;&#21153;" />
     </LinearLayout>
 
     <EditText

@@ -189,4 +189,14 @@
             android:text="&#21024;&#38500;" />
     </LinearLayout>
 
+    <Button
+        android:id="@+id/btnVideoTask"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:minHeight="0dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:text="&#21019;&#24314;&#35270;&#39057;&#23548;&#20986;&#20219;&#21153;" />
+
 </LinearLayout>

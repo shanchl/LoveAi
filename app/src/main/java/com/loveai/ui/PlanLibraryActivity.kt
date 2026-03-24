@@ -29,6 +29,7 @@ import com.loveai.model.PlanStatus
 import com.loveai.model.PlanTheme
 import com.loveai.repository.ExportRepository
 import com.loveai.repository.PlanRepository
+import com.loveai.repository.VideoExportRepository
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -41,12 +42,14 @@ class PlanLibraryActivity : AppCompatActivity() {
     private lateinit var btnCreate: Button
     private lateinit var btnOpenExportCenter: Button
     private lateinit var btnOpenSmartGenerate: Button
+    private lateinit var btnOpenVideoCenter: Button
     private lateinit var etSearchPlan: EditText
     private lateinit var spThemeFilter: Spinner
     private lateinit var spStatusFilter: Spinner
     private lateinit var spSortMode: Spinner
     private lateinit var repository: PlanRepository
     private lateinit var exportRepository: ExportRepository
+    private lateinit var videoExportRepository: VideoExportRepository
     private lateinit var adapter: PlanAdapter
 
     private val themeFilterOptions = listOf(null) + PlanTheme.values().toList()
@@ -63,6 +66,7 @@ class PlanLibraryActivity : AppCompatActivity() {
 
         repository = PlanRepository(this)
         exportRepository = ExportRepository(this)
+        videoExportRepository = VideoExportRepository(this)
         MusicManager.ensurePlaylist(this)
 
         initViews()
@@ -82,6 +86,7 @@ class PlanLibraryActivity : AppCompatActivity() {
         btnCreate = findViewById(R.id.btnCreatePlan)
         btnOpenExportCenter = findViewById(R.id.btnOpenExportCenter)
         btnOpenSmartGenerate = findViewById(R.id.btnOpenSmartGenerate)
+        btnOpenVideoCenter = findViewById(R.id.btnOpenVideoCenter)
         etSearchPlan = findViewById(R.id.etSearchPlan)
         spThemeFilter = findViewById(R.id.spThemeFilter)
         spStatusFilter = findViewById(R.id.spStatusFilter)
@@ -95,6 +100,9 @@ class PlanLibraryActivity : AppCompatActivity() {
         }
         btnOpenSmartGenerate.setOnClickListener {
             startActivity(Intent(this, SmartGenerateActivity::class.java))
+        }
+        btnOpenVideoCenter.setOnClickListener {
+            startActivity(Intent(this, VideoExportCenterActivity::class.java))
         }
 
         etSearchPlan.addTextChangedListener(object : TextWatcher {
@@ -182,6 +190,9 @@ class PlanLibraryActivity : AppCompatActivity() {
             },
             onShare = { plan ->
                 sharePlanArtwork(plan)
+            },
+            onVideoTask = { plan ->
+                createVideoTask(plan)
             }
         )
 
@@ -256,6 +267,38 @@ class PlanLibraryActivity : AppCompatActivity() {
         }
     }
 
+    private fun createVideoTask(plan: LovePlan) {
+        val queued = videoExportRepository.enqueue(plan.id, plan.name)
+        val running = queued.copy(
+            status = com.loveai.model.VideoExportStatus.RUNNING,
+            note = "\u6b63\u5728\u751f\u6210\u89c6\u9891\u811a\u672c\u5305"
+        )
+        videoExportRepository.update(running)
+
+        runCatching {
+            val exported = VideoStoryboardExporter.export(this, plan)
+            videoExportRepository.update(
+                running.copy(
+                    status = com.loveai.model.VideoExportStatus.COMPLETED,
+                    outputPath = exported.file.absolutePath,
+                    finishedAt = System.currentTimeMillis(),
+                    note = "\u5df2\u751f\u6210 ${exported.sceneCount} \u9875\u89c6\u9891\u811a\u672c\u5305"
+                )
+            )
+            Toast.makeText(this, "\u89c6\u9891\u4efb\u52a1\u5df2\u521b\u5efa", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, VideoExportCenterActivity::class.java))
+        }.onFailure {
+            videoExportRepository.update(
+                running.copy(
+                    status = com.loveai.model.VideoExportStatus.FAILED,
+                    finishedAt = System.currentTimeMillis(),
+                    note = "\u89c6\u9891\u811a\u672c\u5305\u751f\u6210\u5931\u8d25"
+                )
+            )
+            Toast.makeText(this, "\u89c6\u9891\u4efb\u52a1\u521b\u5efa\u5931\u8d25", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private class PlanAdapter(
         private val resolveSongName: (String?) -> String?,
         private val onOpen: (LovePlan) -> Unit,
@@ -263,7 +306,8 @@ class PlanLibraryActivity : AppCompatActivity() {
         private val onDuplicate: (LovePlan) -> Unit,
         private val onDelete: (LovePlan) -> Unit,
         private val onExport: (LovePlan) -> Unit,
-        private val onShare: (LovePlan) -> Unit
+        private val onShare: (LovePlan) -> Unit,
+        private val onVideoTask: (LovePlan) -> Unit
     ) : RecyclerView.Adapter<PlanAdapter.ViewHolder>() {
 
         private var items: List<LovePlan> = emptyList()
@@ -334,6 +378,7 @@ class PlanLibraryActivity : AppCompatActivity() {
             holder.btnDelete.setOnClickListener { onDelete(plan) }
             holder.btnExport.setOnClickListener { onExport(plan) }
             holder.btnShare.setOnClickListener { onShare(plan) }
+            holder.btnVideoTask.setOnClickListener { onVideoTask(plan) }
         }
 
         override fun getItemCount(): Int = items.size
@@ -354,6 +399,7 @@ class PlanLibraryActivity : AppCompatActivity() {
             val btnDelete: Button = view.findViewById(R.id.btnDeletePlan)
             val btnExport: Button = view.findViewById(R.id.btnExportPlan)
             val btnShare: Button = view.findViewById(R.id.btnSharePlan)
+            val btnVideoTask: Button = view.findViewById(R.id.btnVideoTask)
         }
 
         companion object {

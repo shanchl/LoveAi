@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#120B16"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnBackVideoExportCenter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="&#36820;&#22238;" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:text="&#35270;&#39057;&#23548;&#20986;&#20219;&#21153;"
+            android:textColor="#FFFFFF"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="&#24403;&#21069;&#20808;&#29983;&#25104;&#21487;&#29992;&#20110;&#21518;&#32493;&#28110;&#26579;&#30340;&#35270;&#39057;&#33050;&#26412;&#21253;&#65292;&#20026;&#30495;&#27491; MP4 &#23548;&#20986;&#20570;&#20934;&#22791;"
+        android:textColor="#CCFFFFFF"
+        android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/tvEmptyVideoTasks"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="&#36824;&#27809;&#26377;&#35270;&#39057;&#23548;&#20986;&#20219;&#21153;"
+        android:textColor="#A8FFFFFF" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvVideoTasks"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:layout_weight="1" />
+
+</LinearLayout>
